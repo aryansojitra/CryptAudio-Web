@@ -1,0 +1,58 @@
+# =============================================================================
+# CryptAudio Web — .gitignore
+# =============================================================================
+
+# --- Python Virtual Environment ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Python Bytecode & Cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# --- Test & Linter Caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# --- Environment & Secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Temporary Files ---
+temporary/*
+!temporary/.gitkeep
+*.part
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# --- Generated / Test Audio ---
+generated_audio/
+test_audio/
+*.wav.out
+
+# --- OS Metadata ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- IDE & Editor ---
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
