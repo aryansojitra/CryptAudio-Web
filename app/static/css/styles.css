@@ -185,6 +185,17 @@ code, kbd, samp, pre {
   border-radius: 50%;
   background-color: var(--color-success);
   box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+  transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.status-dot.disconnected {
+  background-color: var(--color-error);
+  box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2);
+}
+
+.status-dot.checking {
+  background-color: var(--color-warning);
+  box-shadow: 0 0 0 2px rgba(237, 108, 2, 0.2);
 }
 
 .btn-mobile-nav {

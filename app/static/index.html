@@ -54,9 +54,10 @@
             </div>
 
             <div class="header-right">
-                <div class="status-indicator" title="FastAPI backend operational">
-                    <span class="status-dot"></span>
-                    <span>Backend: Online</span>
+                <!-- Real Backend Connection Indicator with Refresh -->
+                <div id="backend-status-pill" class="status-indicator" title="Click to refresh connection status" role="status" style="cursor: pointer;">
+                    <span id="backend-status-dot" class="status-dot checking"></span>
+                    <span id="backend-status-text">Backend: Connecting...</span>
                 </div>
 
                 <!-- Theme Toggle Button -->
@@ -165,11 +166,11 @@
         <main class="app-main">
             <div class="content-wrapper">
 
-                <!-- Phase 9 Demonstration Mode Banner -->
+                <!-- Backend Connection Banner -->
                 <div class="demo-banner">
                     <div class="demo-banner-content">
-                        <span class="demo-badge">Phase 9 Demo</span>
-                        <span>Frontend UI is active in client-side demonstration mode. Full backend REST API integration will connect in Phase 10.</span>
+                        <span class="demo-badge" style="background-color: var(--color-success); color: #FFFFFF;">Local API</span>
+                        <span>Full FastAPI backend integration active at <code style="font-weight: 600;">127.0.0.1:8000</code>. Audio files and cryptographic secrets remain strictly local.</span>
                     </div>
                 </div>
 
@@ -320,10 +321,10 @@
                                         </svg>
                                         <div>
                                             <div class="file-preview-name">carrier_audio.wav</div>
-                                            <div class="file-preview-size">1.25 MB (16-bit, 44.1 kHz, Stereo)</div>
+                                            <div class="file-preview-size">0 KB</div>
                                         </div>
                                     </div>
-                                    <span class="badge-academic">Ready</span>
+                                    <span class="badge-academic">Selected</span>
                                 </div>
                             </div>
 
@@ -358,11 +359,11 @@
                                 </div>
                             </div>
 
-                            <!-- Theoretical Capacity Meter (Demonstration) -->
+                            <!-- Theoretical Capacity Meter -->
                             <div class="capacity-container">
                                 <div class="capacity-header">
-                                    <span class="capacity-title">Estimated LSB Capacity Utilization (Demo)</span>
-                                    <span id="embed-capacity-percent" class="capacity-metric">0.00% utilized (est. 0 / 55,125 B)</span>
+                                    <span class="capacity-title">Estimated LSB Capacity Utilization</span>
+                                    <span id="embed-capacity-percent" class="capacity-metric">0.00% utilized</span>
                                 </div>
                                 <div class="progress-bar-bg">
                                     <div id="embed-capacity-fill" class="progress-bar-fill safe" style="width: 1%;"></div>
@@ -370,18 +371,18 @@
                             </div>
 
                             <div class="action-bar">
-                                <button type="button" id="btn-simulate-embed" class="btn btn-primary">
+                                <button type="button" id="btn-embed-submit" class="btn btn-primary">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                                     </svg>
-                                    Simulate Embed (Demo)
+                                    Encrypt &amp; Embed Message
                                 </button>
                                 <button type="button" class="btn btn-secondary" data-reset-form="form-embed">Reset</button>
                             </div>
                         </form>
                     </div>
 
-                    <!-- Simulated Result Card -->
+                    <!-- Real Result Card -->
                     <div id="embed-result-card" class="card result-card success" style="display: none;">
                         <div class="card-header">
                             <div>
@@ -390,7 +391,7 @@
                                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                         <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                     </svg>
-                                    Embedding Simulation Complete (Demo)
+                                    Embedding Succeeded
                                 </h3>
                                 <p class="card-subtitle">Secret message encrypted with AES-256-GCM and framed in LSBs</p>
                             </div>
@@ -401,27 +402,27 @@
                         <div class="grid-3" style="margin-bottom: 1.25rem;">
                             <div class="stat-card">
                                 <div class="stat-label">Payload Size</div>
-                                <div class="stat-value">128 B</div>
+                                <div id="embed-result-payload-size" class="stat-value">0 B</div>
                                 <div class="stat-desc">Plaintext message</div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Framed Size</div>
-                                <div class="stat-value">174 B</div>
+                                <div id="embed-result-framed-size" class="stat-value">0 B</div>
                                 <div class="stat-desc">Ciphertext + Headers</div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">LSB Utilization</div>
-                                <div class="stat-value">0.31%</div>
-                                <div class="stat-desc">Negligible signal distortion</div>
+                                <div id="embed-result-utilization" class="stat-value">0.00%</div>
+                                <div class="stat-desc">Carrier signal modified</div>
                             </div>
                         </div>
-                        <button class="btn btn-primary" onclick="window.showToast('Demo download placeholder: Real audio download activates in Phase 10 integration.', 'info');">
+                        <button id="btn-download-stego" class="btn btn-primary">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                 <polyline points="7 10 12 15 17 10"></polyline>
                                 <line x1="12" y1="15" x2="12" y2="3"></line>
                             </svg>
-                            Download Stego WAV (Demo Placeholder)
+                            Download Stego WAV File
                         </button>
                     </div>
                 </section>
@@ -455,7 +456,7 @@
                                         </svg>
                                         <div>
                                             <div class="file-preview-name">carrier_stego.wav</div>
-                                            <div class="file-preview-size">1.25 MB (LSB Embedded)</div>
+                                            <div class="file-preview-size">0 KB</div>
                                         </div>
                                     </div>
                                     <span class="badge-academic">Stego Carrier</span>
@@ -480,18 +481,18 @@
                             </div>
 
                             <div class="action-bar">
-                                <button type="button" id="btn-simulate-extract" class="btn btn-primary">
+                                <button type="button" id="btn-extract-submit" class="btn btn-primary">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="20 6 9 17 4 12"></polyline>
                                     </svg>
-                                    Simulate Extract (Demo)
+                                    Extract &amp; Decrypt Message
                                 </button>
                                 <button type="button" class="btn btn-secondary" data-reset-form="form-extract">Reset</button>
                             </div>
                         </form>
                     </div>
 
-                    <!-- Simulated Recovered Message Card -->
+                    <!-- Real Recovered Message Card -->
                     <div id="extract-result-card" class="card result-card success" style="display: none;">
                         <div class="card-header">
                             <div>
@@ -499,17 +500,14 @@
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-success);">
                                         <polyline points="20 6 9 17 4 12"></polyline>
                                     </svg>
-                                    Decrypted Plaintext Message (Demo Simulation)
+                                    Decrypted Plaintext Message
                                 </h3>
                                 <p class="card-subtitle">CRC32 valid &bull; AES-256-GCM authentication tag verified</p>
                             </div>
                             <span class="badge-academic" style="background-color: var(--color-success-bg); color: var(--color-success); border-color: var(--color-success-border);">Verified</span>
                         </div>
 
-                        <div id="recovered-message-text" class="payload-display">CLASSIFIED MISSION BRIEFING [SAMPLE DEMO]:
-Operation CryptAudio has verified secure signal transmission over uncompressed carrier channel.
-Rendezvous coordinates: 23.0225° N, 72.5714° E (Ahmedabad, India).
-All cryptographic parameters verified intact under PBKDF2-HMAC-SHA256 derivation.</div>
+                        <div id="recovered-message-text" class="payload-display"></div>
 
                         <div class="copy-toolbar">
                             <button class="btn btn-secondary btn-sm" data-copy-target="recovered-message-text">
@@ -550,65 +548,65 @@ All cryptographic parameters verified intact under PBKDF2-HMAC-SHA256 derivation
                                         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
                                     </svg>
                                     <div>
-                                        <div class="file-preview-name">sample_track.wav</div>
-                                        <div class="file-preview-size">1.76 MB (PCM Audio)</div>
+                                        <div class="file-preview-name">audio.wav</div>
+                                        <div class="file-preview-size">0 KB</div>
                                     </div>
                                 </div>
-                                <span class="badge-academic">Carrier</span>
+                                <span class="badge-academic">Selected</span>
                             </div>
                         </div>
 
                         <div class="action-bar">
-                            <button type="button" id="btn-simulate-inspect" class="btn btn-primary">
+                            <button type="button" id="btn-inspect-submit" class="btn btn-primary">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="11" cy="11" r="8"></circle>
                                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                                 </svg>
-                                Simulate Inspection (Demo)
+                                Inspect Audio Metadata
                             </button>
                         </div>
                     </div>
 
-                    <!-- Inspection Results Grid (Demonstration) -->
+                    <!-- Inspection Results Grid -->
                     <div id="inspect-results-grid" class="grid-4" style="display: none;">
                         <div class="stat-card">
                             <div class="stat-label">Audio Format</div>
-                            <div class="stat-value" style="font-size: 1.15rem;">PCM (WAVE)</div>
+                            <div id="inspect-format" class="stat-value" style="font-size: 1.15rem;">PCM (WAVE)</div>
                             <div class="stat-desc">WAVE_FORMAT_PCM (0x0001)</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Sample Rate</div>
-                            <div class="stat-value">44,100 Hz</div>
-                            <div class="stat-desc">Standard Audio CD Fidelity</div>
+                            <div id="inspect-sample-rate" class="stat-value">44,100 Hz</div>
+                            <div class="stat-desc">Audio Sampling Frequency</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Channels</div>
-                            <div class="stat-value">2 (Stereo)</div>
-                            <div class="stat-desc">Left / Right interleaved</div>
+                            <div id="inspect-channels" class="stat-value">2 (Stereo)</div>
+                            <div class="stat-desc">Audio channels interleaved</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Bit Depth</div>
-                            <div class="stat-value">16-bit</div>
-                            <div class="stat-desc">2 bytes per sample per channel</div>
+                            <div id="inspect-bit-depth" class="stat-value">16-bit</div>
+                            <div class="stat-desc">Sample bit resolution</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Duration</div>
-                            <div class="stat-value">10.50 s</div>
-                            <div class="stat-desc">463,050 audio frames</div>
+                            <div id="inspect-duration" class="stat-value">0.00 s</div>
+                            <div class="stat-desc">Play duration</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Total Samples</div>
-                            <div class="stat-value">926,100</div>
+                            <div id="inspect-total-samples" class="stat-value">0</div>
                             <div class="stat-desc">Frames &times; Channels</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Raw LSB Capacity</div>
-                            <div class="stat-value">115.76 KB</div>
-                            <div class="stat-desc">926,100 bits theoretical</div>
+                            <div id="inspect-raw-capacity" class="stat-value">0 B</div>
+                            <div class="stat-desc">1 bit per audio sample</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Usable Payload</div>
-                            <div class="stat-value">115.71 KB</div>
+                            <div id="inspect-usable-capacity" class="stat-value">0 B</div>
                             <div class="stat-desc">Excluding 46 B protocol headers</div>
                         </div>
                     </div>
@@ -639,7 +637,7 @@ All cryptographic parameters verified intact under PBKDF2-HMAC-SHA256 derivation
                                     <div class="file-preview-info">
                                         <div>
                                             <div class="file-preview-name">original_carrier.wav</div>
-                                            <div class="file-preview-size">1.25 MB</div>
+                                            <div class="file-preview-size">0 KB</div>
                                         </div>
                                     </div>
                                 </div>
@@ -659,7 +657,7 @@ All cryptographic parameters verified intact under PBKDF2-HMAC-SHA256 derivation
                                     <div class="file-preview-info">
                                         <div>
                                             <div class="file-preview-name">stego_output.wav</div>
-                                            <div class="file-preview-size">1.25 MB</div>
+                                            <div class="file-preview-size">0 KB</div>
                                         </div>
                                     </div>
                                 </div>
@@ -667,47 +665,47 @@ All cryptographic parameters verified intact under PBKDF2-HMAC-SHA256 derivation
                         </div>
 
                         <div class="action-bar">
-                            <button type="button" id="btn-simulate-analyze" class="btn btn-primary">
+                            <button type="button" id="btn-analyze-submit" class="btn btn-primary">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <line x1="18" y1="20" x2="18" y2="10"></line>
                                     <line x1="12" y1="20" x2="12" y2="4"></line>
                                     <line x1="6" y1="20" x2="6" y2="14"></line>
                                 </svg>
-                                Simulate Analysis (Demo)
+                                Compare &amp; Analyze Audio Quality
                             </button>
                         </div>
                     </div>
 
-                    <!-- Quality Analysis Result Cards (Demonstration) -->
+                    <!-- Quality Analysis Result Cards -->
                     <div id="analyze-results-card" class="card" style="display: none;">
                         <div class="card-header">
                             <div>
-                                <h3 class="card-title">Steganographic Distortion Assessment (Demo)</h3>
+                                <h3 class="card-title">Steganographic Distortion Assessment</h3>
                                 <p class="card-subtitle">Calculated using NumPy vectorized floating-point evaluation</p>
                             </div>
-                            <span class="badge-quality excellent">&check; Excellent Fidelity</span>
+                            <span id="analyze-assessment-badge" class="badge-quality excellent">&check; Excellent Fidelity</span>
                         </div>
 
                         <div class="grid-4" style="margin-bottom: 1.5rem;">
                             <div class="stat-card">
                                 <div class="stat-label">Mean Squared Error (MSE)</div>
-                                <div class="stat-value">0.000031</div>
-                                <div class="stat-desc">Near-zero signal deviation</div>
+                                <div id="analyze-mse" class="stat-value">0.000000</div>
+                                <div class="stat-desc">Signal energy deviation</div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Signal-to-Noise (SNR)</div>
-                                <div class="stat-value">91.42 dB</div>
-                                <div class="stat-desc">Dominant carrier signal</div>
+                                <div id="analyze-snr" class="stat-value">0.00 dB</div>
+                                <div class="stat-desc">Dominant carrier ratio</div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Peak SNR (PSNR)</div>
-                                <div class="stat-value">96.88 dB</div>
+                                <div id="analyze-psnr" class="stat-value">0.00 dB</div>
                                 <div class="stat-desc">> 50 dB indicates transparent</div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Pearson Correlation (r)</div>
-                                <div class="stat-value">0.999999</div>
-                                <div class="stat-desc">1.000000 = perfectly identical</div>
+                                <div id="analyze-correlation" class="stat-value">1.000000</div>
+                                <div class="stat-desc">1.000000 = identical</div>
                             </div>
                         </div>
 
@@ -723,27 +721,27 @@ All cryptographic parameters verified intact under PBKDF2-HMAC-SHA256 derivation
                             <tbody>
                                 <tr>
                                     <td>PSNR</td>
-                                    <td>96.88 dB</td>
+                                    <td id="analyze-table-psnr">0.00 dB</td>
                                     <td>&gt; 40 dB (Acceptable), &gt; 50 dB (Imperceptible)</td>
                                     <td>Imperceptible to human auditory system</td>
                                 </tr>
                                 <tr>
                                     <td>SNR</td>
-                                    <td>91.42 dB</td>
+                                    <td id="analyze-table-snr">0.00 dB</td>
                                     <td>&gt; 35 dB (High Quality)</td>
-                                    <td>LSB modification acts as sub-audible white noise</td>
+                                    <td>LSB modification acts as sub-audible noise</td>
                                 </tr>
                                 <tr>
                                     <td>MSE</td>
-                                    <td>3.1 &times; 10<sup>-5</sup></td>
+                                    <td id="analyze-table-mse">0.0</td>
                                     <td>Approaching 0.0</td>
-                                    <td>Negligible energy difference between waveforms</td>
+                                    <td>Energy difference between waveforms</td>
                                 </tr>
                                 <tr>
                                     <td>Pearson Correlation (r)</td>
-                                    <td>0.999999</td>
+                                    <td id="analyze-table-correlation">1.000000</td>
                                     <td>&gt; 0.990000</td>
-                                    <td>Near-perfect waveform alignment</td>
+                                    <td>Waveform alignment correlation</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -829,6 +827,7 @@ All cryptographic parameters verified intact under PBKDF2-HMAC-SHA256 derivation
 
     <!-- Application Scripts -->
     <script src="/static/js/theme.js"></script>
+    <script src="/static/js/api.js"></script>
     <script src="/static/js/app.js"></script>
 </body>
 </html>
