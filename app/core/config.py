@@ -5,6 +5,8 @@ CryptAudio Web — Centralized Application Configuration
 
 from __future__ import annotations
 
+from pathlib import Path
+
 
 class Settings:
     """Application settings with sensible defaults for local development."""
@@ -19,16 +21,22 @@ class Settings:
     )
     APP_VERSION: str = "1.0.0"
 
-    # --- Server ---
+    # --- Server Binding ---
     HOST: str = "127.0.0.1"   # Localhost only — never expose publicly
     PORT: int = 8000
 
     # --- Runtime ---
-    DEBUG: bool = False        # Set True during active development if needed
+    DEBUG: bool = False
 
-    # --- Upload limits (enforced in future phases) ---
-    MAX_UPLOAD_BYTES: int = 50 * 1024 * 1024  # 50 MB ceiling for WAV files
+    # --- Upload Limits ---
+    MAX_UPLOAD_BYTES: int = 50 * 1024 * 1024           # 50 MB per single WAV file
+    MAX_COMBINED_UPLOAD_BYTES: int = 100 * 1024 * 1024  # 100 MB combined limit for analysis
+
+    # --- Temporary File Storage ---
+    TEMP_DIR: Path = Path(__file__).resolve().parent.parent.parent / "temporary"
 
 
-# Module-level singleton — import this everywhere
+# Module-level singleton
 settings = Settings()
+# Ensure temporary directory exists
+settings.TEMP_DIR.mkdir(parents=True, exist_ok=True)

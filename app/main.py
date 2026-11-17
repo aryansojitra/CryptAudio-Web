@@ -11,6 +11,7 @@ import logging
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -80,8 +81,26 @@ async def serve_index(request: Request) -> FileResponse:
 
 
 # ---------------------------------------------------------------------------
-# Centralized exception handler — no stack traces exposed to callers
+# Centralized exception handlers — no stack traces exposed to callers
 # ---------------------------------------------------------------------------
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """
+    Handle validation errors with HTTP 400 and standard error JSON format.
+    """
+    logger.warning("Validation error on %s %s: %s", request.method, request.url.path, exc)
+    return JSONResponse(
+        status_code=400,
+        content={
+            "success": False,
+            "error": {
+                "code": "INVALID_REQUEST",
+                "message": "Invalid or missing request parameters.",
+            },
+        },
+    )
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
