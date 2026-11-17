@@ -19,6 +19,9 @@
   // --------------------------------------------------------------------------
   const state = {
     embedFile: null,
+    embedCarrierSamples: 0,
+    embedCarrierRawBytes: 0,
+    embedCarrierMaxPlaintext: 0,
     extractFile: null,
     inspectFile: null,
     analyzeOrigFile: null,
@@ -46,7 +49,12 @@
       iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
     }
 
-    toast.innerHTML = `<span>${iconSvg}</span><span>${escapeHtml(message)}</span>`;
+    const iconSpan = document.createElement('span');
+    iconSpan.innerHTML = iconSvg;
+    const textSpan = document.createElement('span');
+    textSpan.textContent = String(message ?? '');
+    toast.appendChild(iconSpan);
+    toast.appendChild(textSpan);
     container.appendChild(toast);
 
     setTimeout(() => {
@@ -70,10 +78,10 @@
   }
 
   function formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    if (!bytes || isNaN(bytes)) return '0 Bytes';
+    if (bytes === 0) return '0 B';
+    if (!bytes || isNaN(bytes)) return '0 B';
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ['B', 'KiB', 'MiB', 'GiB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
@@ -187,25 +195,31 @@
     const statusPill = document.getElementById('backend-status-pill');
     const statusDot = document.getElementById('backend-status-dot');
     const statusText = document.getElementById('backend-status-text');
+    const dashDot = document.getElementById('dash-backend-dot');
+    const dashText = document.getElementById('dash-backend-text');
 
-    if (!statusDot || !statusText) return;
-
-    statusDot.className = 'status-dot checking';
-    statusText.textContent = 'Backend: Checking...';
+    if (statusDot) statusDot.className = 'status-dot checking';
+    if (statusText) statusText.textContent = 'Backend: Checking...';
+    if (dashDot) dashDot.className = 'status-dot checking';
+    if (dashText) dashText.textContent = 'Checking...';
 
     try {
       const data = await window.CryptAudioAPI.checkHealth();
       if (data.status === 'healthy') {
-        statusDot.className = 'status-dot';
-        statusText.textContent = `Backend: Connected (v${data.version})`;
+        if (statusDot) statusDot.className = 'status-dot';
+        if (statusText) statusText.textContent = `Backend: Connected (v${data.version})`;
         if (statusPill) statusPill.title = `${data.application} v${data.version} operational. Click to refresh.`;
+        if (dashDot) dashDot.className = 'status-dot';
+        if (dashText) dashText.textContent = `Connected (v${data.version})`;
       } else {
         throw new Error('Unhealthy status reported');
       }
     } catch (err) {
-      statusDot.className = 'status-dot disconnected';
-      statusText.textContent = 'Backend: Disconnected (Retry)';
+      if (statusDot) statusDot.className = 'status-dot disconnected';
+      if (statusText) statusText.textContent = 'Backend: Disconnected (Retry)';
       if (statusPill) statusPill.title = 'Cannot reach backend at 127.0.0.1:8000. Click to retry.';
+      if (dashDot) dashDot.className = 'status-dot disconnected';
+      if (dashText) dashText.textContent = 'Disconnected';
     }
   }
 
@@ -246,54 +260,117 @@
   }
 
   // --------------------------------------------------------------------------
-  // 6. Message Character & Byte Counter
+  // 6. Message Counter & Accurate Capacity Display (Phase 10.1)
   // --------------------------------------------------------------------------
   function setupMessageCounter() {
     const textarea = document.getElementById('embed-message-input');
     const charCounter = document.getElementById('embed-char-counter');
     const byteCounter = document.getElementById('embed-byte-counter');
 
-    if (!textarea || !charCounter || !byteCounter) return;
+    if (!textarea) return;
 
     textarea.addEventListener('input', function () {
       const text = this.value;
       const charCount = text.length;
       const byteCount = new TextEncoder().encode(text).length;
 
-      charCounter.textContent = `${charCount} char${charCount === 1 ? '' : 's'}`;
-      byteCounter.textContent = `${byteCount} byte${byteCount === 1 ? '' : 's'}`;
+      if (charCounter) charCounter.textContent = `${charCount} char${charCount === 1 ? '' : 's'}`;
+      if (byteCounter) byteCounter.textContent = `${byteCount} byte${byteCount === 1 ? '' : 's'}`;
 
-      updateCapacityMeter(byteCount);
+      updateCapacityDisplay();
     });
   }
 
-  function updateCapacityMeter(byteCount) {
-    const fill = document.getElementById('embed-capacity-fill');
-    const label = document.getElementById('embed-capacity-percent');
-    if (!fill || !label) return;
+  function updateCapacityDisplay() {
+    const textarea = document.getElementById('embed-message-input');
+    const message = textarea ? textarea.value : '';
+    const msgChars = message.length;
+    const msgBytes = new TextEncoder().encode(message).length;
 
-    // Use selected carrier file size if available as a baseline approximation
-    let estTotalCapacity = 55125;
-    if (state.embedFile && state.embedFile.size > 100) {
-      // 16-bit mono: 1 byte per sample = 0.5 bits per audio byte
-      // Approximate theoretical capacity ~ file.size / (sample_width)
-      estTotalCapacity = Math.floor(state.embedFile.size / 2);
+    // Cryptographic payload:
+    // Fixed crypto header: 33 bytes (Magic 4B + Version 1B + Salt 16B + Nonce 12B)
+    // Ciphertext: msgBytes
+    // AES-GCM tag: 16 bytes
+    // Encrypted payload size = msgBytes + 49
+    const cryptoBytes = msgBytes > 0 ? msgBytes + 49 : 0;
+
+    // LSB framing header: 13 bytes (Magic 4B + Version 1B + Length 4B + CRC32 4B)
+    // Framed payload size = cryptoBytes + 13 = msgBytes + 62
+    const framedBytes = cryptoBytes > 0 ? cryptoBytes + 13 : 0;
+
+    // Required samples: 1 bit embedded per sample
+    const reqSamples = framedBytes * 8;
+
+    // Carrier samples & capacity
+    const totalSamples = state.embedCarrierSamples || 0;
+    const rawCapBytes = state.embedCarrierRawBytes || (totalSamples > 0 ? Math.floor(totalSamples / 8) : 0);
+    const maxPlaintext = Math.max(0, rawCapBytes - 62);
+
+    // Update UI elements
+    const elMsgSize = document.getElementById('embed-cap-msg-size');
+    const elCryptoSize = document.getElementById('embed-cap-crypto-size');
+    const elFramedSize = document.getElementById('embed-cap-framed-size');
+    const elReqSamples = document.getElementById('embed-cap-req-samples');
+    const elAvailSamples = document.getElementById('embed-cap-avail-samples');
+    const elMaxPlaintext = document.getElementById('embed-cap-max-plaintext');
+    const fill = document.getElementById('embed-capacity-fill');
+    const percentLabel = document.getElementById('embed-capacity-percent');
+
+    if (elMsgSize) {
+      elMsgSize.textContent = `${msgBytes} B (${msgChars} char${msgChars === 1 ? '' : 's'})`;
+    }
+    if (elCryptoSize) {
+      elCryptoSize.textContent = cryptoBytes > 0 ? `${cryptoBytes} B` : '0 B';
+    }
+    if (elFramedSize) {
+      elFramedSize.textContent = framedBytes > 0 ? `${framedBytes} B` : '0 B';
+    }
+    if (elReqSamples) {
+      elReqSamples.textContent = `${reqSamples.toLocaleString()} sample${reqSamples === 1 ? '' : 's'}`;
+    }
+    if (elAvailSamples) {
+      if (totalSamples > 0) {
+        elAvailSamples.textContent = `${totalSamples.toLocaleString()} samples (${formatBytes(rawCapBytes)})`;
+      } else if (state.embedFile) {
+        elAvailSamples.textContent = 'Inspecting carrier...';
+      } else {
+        elAvailSamples.textContent = 'Select carrier WAV';
+      }
+    }
+    if (elMaxPlaintext) {
+      if (totalSamples > 0) {
+        elMaxPlaintext.textContent = `${maxPlaintext.toLocaleString()} B (${(maxPlaintext / 1024).toFixed(2)} KiB)`;
+      } else {
+        elMaxPlaintext.textContent = '—';
+      }
     }
 
-    const overhead = 46; // 13B stego header + 33B crypto header
-    const totalBytes = byteCount > 0 ? byteCount + overhead : 0;
-    const percent = Math.min(100, (totalBytes / Math.max(1, estTotalCapacity)) * 100).toFixed(2);
+    // Utilization percentage
+    let percent = 0.0;
+    if (totalSamples > 0 && reqSamples > 0) {
+      percent = (reqSamples / totalSamples) * 100;
+    }
 
-    fill.style.width = `${Math.max(1, percent)}%`;
-    label.textContent = `${percent}% utilized (est. ${totalBytes} / ${estTotalCapacity.toLocaleString()} B)`;
+    if (percentLabel) {
+      if (totalSamples > 0) {
+        const precision = percent < 0.01 && percent > 0 ? 4 : 2;
+        percentLabel.textContent = `${percent.toFixed(precision)}% utilized (${framedBytes.toLocaleString()} / ${rawCapBytes.toLocaleString()} B)`;
+      } else {
+        percentLabel.textContent = '0.00% utilized (Carrier not selected)';
+      }
+    }
 
-    fill.classList.remove('safe', 'warning', 'danger');
-    if (percent < 60) {
-      fill.classList.add('safe');
-    } else if (percent < 90) {
-      fill.classList.add('warning');
-    } else {
-      fill.classList.add('danger');
+    if (fill) {
+      const displayWidth = Math.min(100, percent);
+      fill.style.width = `${reqSamples > 0 && totalSamples > 0 ? Math.max(1, displayWidth) : 0}%`;
+      fill.classList.remove('safe', 'warning', 'danger');
+      if (percent > 100) {
+        fill.classList.add('danger');
+      } else if (percent > 85) {
+        fill.classList.add('warning');
+      } else {
+        fill.classList.add('safe');
+      }
     }
   }
 
@@ -351,9 +428,26 @@
     // Map input to internal state
     if (inputId === 'embed-file-input') {
       state.embedFile = file;
-      const msgTextarea = document.getElementById('embed-message-input');
-      const currentBytes = msgTextarea ? new TextEncoder().encode(msgTextarea.value).length : 0;
-      updateCapacityMeter(currentBytes);
+      updateCapacityDisplay();
+
+      // Retrieve authoritative carrier metadata & samples from backend
+      if (window.CryptAudioAPI && typeof window.CryptAudioAPI.inspectAudio === 'function') {
+        window.CryptAudioAPI.inspectAudio(file).then(data => {
+          if (data && data.capacity) {
+            state.embedCarrierSamples = data.capacity.total_samples || 0;
+            state.embedCarrierRawBytes = data.capacity.raw_capacity_bytes || 0;
+            state.embedCarrierMaxPlaintext = Math.max(0, state.embedCarrierRawBytes - 62);
+            updateCapacityDisplay();
+          }
+        }).catch(() => {
+          // Fallback approximate calculation if backend inspection is deferred
+          const approxSamples = Math.floor(file.size / 2);
+          state.embedCarrierSamples = approxSamples;
+          state.embedCarrierRawBytes = Math.floor(approxSamples / 8);
+          state.embedCarrierMaxPlaintext = Math.max(0, state.embedCarrierRawBytes - 62);
+          updateCapacityDisplay();
+        });
+      }
     } else if (inputId === 'extract-file-input') {
       state.extractFile = file;
     } else if (inputId === 'inspect-file-input') {
@@ -435,7 +529,10 @@
 
         if (payloadEl) payloadEl.textContent = `${result.payloadSize} B`;
         if (framedEl) framedEl.textContent = `${result.framedSize} B`;
-        if (utilEl) utilEl.textContent = `${result.utilizationPercent.toFixed(2)}%`;
+        const utilVal = result.utilizationPercent < 0.01 && result.utilizationPercent > 0
+          ? result.utilizationPercent.toFixed(4)
+          : result.utilizationPercent.toFixed(2);
+        if (utilEl) utilEl.textContent = `${utilVal}%`;
 
         if (resultCard) {
           resultCard.style.display = 'block';
@@ -483,6 +580,9 @@
     const btnSubmit = document.getElementById('btn-extract-submit');
     const resultCard = document.getElementById('extract-result-card');
     const payloadDisplay = document.getElementById('recovered-message-text');
+    const charsEl = document.getElementById('extract-summary-chars');
+    const bytesEl = document.getElementById('extract-summary-bytes');
+    const btnClearRecovered = document.getElementById('btn-clear-recovered');
 
     if (!btnSubmit) return;
 
@@ -505,6 +605,8 @@
 
       // Clear previous output
       if (payloadDisplay) payloadDisplay.textContent = '';
+      if (charsEl) charsEl.textContent = '0';
+      if (bytesEl) bytesEl.textContent = '0 B';
       if (resultCard) resultCard.style.display = 'none';
 
       btnSubmit.disabled = true;
@@ -517,6 +619,12 @@
         if (payloadDisplay) {
           payloadDisplay.textContent = result.message;
         }
+
+        const charCount = result.message ? result.message.length : 0;
+        const byteCount = result.message ? new TextEncoder().encode(result.message).length : 0;
+
+        if (charsEl) charsEl.textContent = charCount.toLocaleString();
+        if (bytesEl) bytesEl.textContent = `${byteCount.toLocaleString()} B (${(byteCount / 1024).toFixed(2)} KiB)`;
 
         if (resultCard) {
           resultCard.style.display = 'block';
@@ -536,6 +644,17 @@
         btnSubmit.innerHTML = originalHtml;
       }
     });
+
+    // Clear Recovered Message action (Phase 10.1)
+    if (btnClearRecovered) {
+      btnClearRecovered.addEventListener('click', function () {
+        if (payloadDisplay) payloadDisplay.textContent = '';
+        if (charsEl) charsEl.textContent = '0';
+        if (bytesEl) bytesEl.textContent = '0 B';
+        if (resultCard) resultCard.style.display = 'none';
+        window.showToast('Recovered message cleared from view.', 'info');
+      });
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -573,6 +692,10 @@
         const rawCapEl = document.getElementById('inspect-raw-capacity');
         const usableCapEl = document.getElementById('inspect-usable-capacity');
 
+        const totalSamples = data.capacity.total_samples || 0;
+        const rawBytes = data.capacity.raw_capacity_bytes || 0;
+        const maxPlaintext = Math.max(0, rawBytes - 62);
+
         if (formatEl) formatEl.textContent = data.audio.audio_format || 'PCM (WAVE)';
         if (rateEl) rateEl.textContent = `${data.audio.sample_rate.toLocaleString()} Hz`;
         if (channelsEl) {
@@ -581,15 +704,20 @@
         }
         if (depthEl) depthEl.textContent = `${data.audio.bit_depth}-bit`;
         if (durationEl) durationEl.textContent = `${data.audio.duration_seconds.toFixed(2)} s`;
-        if (samplesEl) samplesEl.textContent = data.capacity.total_samples.toLocaleString();
-        if (rawCapEl) rawCapEl.textContent = formatBytes(data.capacity.raw_capacity_bytes);
-        if (usableCapEl) {
-          const usable = Math.max(0, data.capacity.raw_capacity_bytes - 46);
-          usableCapEl.textContent = formatBytes(usable);
-        }
+        if (samplesEl) samplesEl.textContent = totalSamples.toLocaleString();
+        if (rawCapEl) rawCapEl.textContent = `${rawBytes.toLocaleString()} B (${(rawBytes / 1024).toFixed(2)} KiB)`;
+        if (usableCapEl) usableCapEl.textContent = `${maxPlaintext.toLocaleString()} B (${(maxPlaintext / 1024).toFixed(2)} KiB)`;
 
         if (resultsGrid) {
           resultsGrid.style.display = 'grid';
+        }
+
+        const overheadPanel = document.getElementById('inspect-overhead-panel');
+        if (overheadPanel) {
+          overheadPanel.style.display = 'block';
+        }
+
+        if (resultsGrid) {
           resultsGrid.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
@@ -639,23 +767,75 @@
 
         // Display MSE
         const mseEl = document.getElementById('analyze-mse');
-        const mseVal = analysis.mse !== null ? analysis.mse.toFixed(6) : 'N/A';
+        const mseVal = analysis.mse !== null && analysis.mse !== undefined ? Number(analysis.mse).toFixed(6) : 'N/A';
         if (mseEl) mseEl.textContent = mseVal;
 
         // Display SNR
         const snrEl = document.getElementById('analyze-snr');
-        const snrVal = analysis.snr_db === 'Infinity' ? '∞' : (analysis.snr_db !== null ? `${analysis.snr_db.toFixed(2)} dB` : 'N/A');
+        let snrVal = 'N/A';
+        if (analysis.snr_db === 'Infinity' || analysis.snr_db === Infinity) {
+          snrVal = '∞ (Identical)';
+        } else if (analysis.snr_db !== null && analysis.snr_db !== undefined && !isNaN(analysis.snr_db)) {
+          snrVal = `${Number(analysis.snr_db).toFixed(2)} dB`;
+        }
         if (snrEl) snrEl.textContent = snrVal;
 
-        // Display PSNR
+        // Display PSNR with illustrative numerical interpretation bands (Phase 10.1)
         const psnrEl = document.getElementById('analyze-psnr');
-        const psnrVal = analysis.psnr_db === 'Infinity' ? '∞' : (analysis.psnr_db !== null ? `${analysis.psnr_db.toFixed(2)} dB` : 'N/A');
+        const psnrDesc = document.getElementById('analyze-psnr-desc');
+        let psnrVal = 'N/A';
+        if (analysis.psnr_db === 'Infinity' || analysis.psnr_db === Infinity) {
+          psnrVal = '∞ (Identical)';
+          if (psnrDesc) psnrDesc.textContent = 'Identical audio signals (zero distortion)';
+        } else if (analysis.psnr_db !== null && analysis.psnr_db !== undefined && !isNaN(analysis.psnr_db)) {
+          const psnrNum = Number(analysis.psnr_db);
+          psnrVal = `${psnrNum.toFixed(2)} dB`;
+          if (psnrDesc) {
+            if (psnrNum >= 50) {
+              psnrDesc.textContent = 'Very high numerical fidelity (> 50 dB)';
+            } else if (psnrNum >= 40) {
+              psnrDesc.textContent = 'High numerical fidelity (40–50 dB)';
+            } else if (psnrNum >= 30) {
+              psnrDesc.textContent = 'Moderate numerical fidelity (30–40 dB)';
+            } else {
+              psnrDesc.textContent = 'Lower numerical fidelity (< 30 dB)';
+            }
+          }
+        }
         if (psnrEl) psnrEl.textContent = psnrVal;
 
         // Display Pearson Correlation
         const corrEl = document.getElementById('analyze-correlation');
-        const corrVal = analysis.correlation !== null ? analysis.correlation.toFixed(6) : 'N/A';
+        const corrDesc = document.getElementById('analyze-corr-desc');
+        let corrVal = 'N/A';
+        if (analysis.correlation !== null && analysis.correlation !== undefined && !isNaN(analysis.correlation)) {
+          const corrNum = Number(analysis.correlation);
+          corrVal = corrNum.toFixed(6);
+          if (corrDesc) {
+            if (Math.abs(corrNum - 1.0) < 0.000001) {
+              corrDesc.textContent = 'r = 1.000000 — Perfect positive linear correlation';
+            } else {
+              corrDesc.textContent = `Linear correlation coefficient: ${corrVal}`;
+            }
+          }
+        }
         if (corrEl) corrEl.textContent = corrVal;
+
+        // Display Modified Samples Metrics (Phase 10.1)
+        const totalSamplesEl = document.getElementById('analyze-total-samples');
+        const modSamplesEl = document.getElementById('analyze-modified-samples');
+        const modPercentEl = document.getElementById('analyze-modified-percent');
+
+        const totalSamples = Number(analysis.total_samples) || 0;
+        const modSamples = Number(analysis.modified_samples) || 0;
+        const modPercent = totalSamples > 0 ? (modSamples / totalSamples) * 100 : 0.0;
+
+        if (totalSamplesEl) totalSamplesEl.textContent = totalSamples.toLocaleString();
+        if (modSamplesEl) modSamplesEl.textContent = modSamples.toLocaleString();
+        if (modPercentEl) {
+          const precision = modPercent < 0.01 && modPercent > 0 ? 4 : 2;
+          modPercentEl.textContent = `${modPercent.toFixed(precision)}%`;
+        }
 
         // Quality assessment badge
         const badge = document.getElementById('analyze-assessment-badge');
@@ -744,6 +924,9 @@
 
         if (formId === 'form-embed') {
           state.embedFile = null;
+          state.embedCarrierSamples = 0;
+          state.embedCarrierRawBytes = 0;
+          state.embedCarrierMaxPlaintext = 0;
           if (state.stegoDownloadUrl) {
             URL.revokeObjectURL(state.stegoDownloadUrl);
             state.stegoDownloadUrl = null;
@@ -754,16 +937,39 @@
           const byteCounter = document.getElementById('embed-byte-counter');
           if (charCounter) charCounter.textContent = '0 chars';
           if (byteCounter) byteCounter.textContent = '0 bytes';
-          updateCapacityMeter(0);
+          updateCapacityDisplay();
         } else if (formId === 'form-extract') {
           state.extractFile = null;
           const resultCard = document.getElementById('extract-result-card');
           if (resultCard) resultCard.style.display = 'none';
           const payloadDisplay = document.getElementById('recovered-message-text');
           if (payloadDisplay) payloadDisplay.textContent = '';
+          const charsEl = document.getElementById('extract-summary-chars');
+          const bytesEl = document.getElementById('extract-summary-bytes');
+          if (charsEl) charsEl.textContent = '0';
+          if (bytesEl) bytesEl.textContent = '0 B';
+        } else if (formId === 'form-inspect') {
+          state.inspectFile = null;
+          const resultsGrid = document.getElementById('inspect-results-grid');
+          if (resultsGrid) resultsGrid.style.display = 'none';
+          const overheadPanel = document.getElementById('inspect-overhead-panel');
+          if (overheadPanel) overheadPanel.style.display = 'none';
+        } else if (formId === 'form-analyze') {
+          state.analyzeOrigFile = null;
+          state.analyzeStegoFile = null;
+          const resultsCard = document.getElementById('analyze-results-card');
+          if (resultsCard) resultsCard.style.display = 'none';
         }
 
         form.querySelectorAll('.file-preview').forEach(p => p.style.display = 'none');
+      });
+    });
+  }
+
+  function setupFormSubmits() {
+    document.querySelectorAll('form').forEach(form => {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
       });
     });
   }
@@ -772,11 +978,13 @@
   // Document Ready Initialization
   // --------------------------------------------------------------------------
   document.addEventListener('DOMContentLoaded', function () {
+    setupFormSubmits();
     setupNavigation();
     setupMobileSidebar();
     setupHealthMonitor();
     setupPasswordToggles();
     setupMessageCounter();
+    updateCapacityDisplay();
     setupDropzones();
     setupClipboard();
     setupFormResets();

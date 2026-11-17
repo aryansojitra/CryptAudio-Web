@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 import uuid
 from pathlib import Path
 from typing import Any
@@ -113,7 +114,7 @@ async def save_upload_safely(
                 total_bytes += len(chunk)
                 if total_bytes > limit:
                     raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                         detail={
                             "code": "FILE_TOO_LARGE",
                             "message": f"Uploaded file exceeds maximum allowed size of {limit} bytes.",
@@ -279,8 +280,9 @@ async def embed(
 
         out_filename = "stego.wav"
         if file.filename:
-            stem = Path(file.filename).stem
-            out_filename = f"{stem}_stego.wav"
+            raw_stem = Path(file.filename).stem
+            clean_stem = re.sub(r"[^\w\-.]", "_", raw_stem).strip("._")
+            out_filename = f"{clean_stem or 'audio'}_stego.wav"
 
         headers = {
             "X-Payload-Size-Bytes": str(result.payload_size_bytes),
@@ -302,7 +304,7 @@ async def embed(
         return api_error_response(exc.status_code, err_detail.get("code", "ERROR"), err_detail.get("message", "Error"))
     except InsufficientAudioCapacityError as exc:
         cleanup_files(temp_in, temp_out)
-        return api_error_response(status.HTTP_422_UNPROCESSABLE_ENTITY, "INSUFFICIENT_CAPACITY", str(exc))
+        return api_error_response(status.HTTP_422_UNPROCESSABLE_CONTENT, "INSUFFICIENT_CAPACITY", str(exc))
     except UnsupportedAudioFormatError as exc:
         cleanup_files(temp_in, temp_out)
         return api_error_response(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_FORMAT", str(exc))
@@ -314,7 +316,7 @@ async def embed(
         err_str = str(exc).lower()
         if "invalid carrier wav" in err_str or "wav" in err_str:
             return api_error_response(status.HTTP_400_BAD_REQUEST, "INVALID_WAV", str(exc))
-        return api_error_response(status.HTTP_422_UNPROCESSABLE_ENTITY, "EMBEDDING_FAILED", str(exc))
+        return api_error_response(status.HTTP_422_UNPROCESSABLE_CONTENT, "EMBEDDING_FAILED", str(exc))
     except Exception as exc:
         cleanup_files(temp_in, temp_out)
         logger.exception("Unexpected error in /api/embed")
@@ -376,19 +378,19 @@ async def extract(
         err_str = str(exc)
         if "authentication or decryption failed" in err_str.lower():
             return api_error_response(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "AUTHENTICATION_FAILED",
                 "Authentication or decryption failed: incorrect password or tampered payload.",
             )
         elif "corrupted" in err_str.lower():
             return api_error_response(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "PAYLOAD_CORRUPTED",
                 "Extracted payload failed integrity checks (corrupted data).",
             )
         elif "no valid hidden payload" in err_str.lower():
             return api_error_response(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "NO_STEGO_PAYLOAD",
                 "The audio file does not contain a valid hidden CryptAudio payload.",
             )
@@ -399,7 +401,7 @@ async def extract(
                 str(exc),
             )
         return api_error_response(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "EXTRACTION_FAILED",
             str(exc),
         )
@@ -442,7 +444,7 @@ async def analyze(
         remaining_budget = settings.MAX_COMBINED_UPLOAD_BYTES - orig_size
         if remaining_budget <= 0:
             raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                 detail={
                     "code": "FILE_TOO_LARGE",
                     "message": "Combined upload size exceeds the maximum allowed limit.",
@@ -490,7 +492,7 @@ async def analyze(
         err_detail = exc.detail if isinstance(exc.detail, dict) else {"code": "BAD_REQUEST", "message": str(exc.detail)}
         return api_error_response(exc.status_code, err_detail.get("code", "ERROR"), err_detail.get("message", "Error"))
     except IncompatibleAudioError as exc:
-        return api_error_response(status.HTTP_422_UNPROCESSABLE_ENTITY, "INCOMPATIBLE_AUDIO", str(exc))
+        return api_error_response(status.HTTP_422_UNPROCESSABLE_CONTENT, "INCOMPATIBLE_AUDIO", str(exc))
     except UnsupportedAudioFormatError as exc:
         return api_error_response(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_FORMAT", str(exc))
     except InvalidWavError as exc:

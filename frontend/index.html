@@ -6,21 +6,8 @@
     <title>CryptAudio Web — Cryptographic Audio Steganography</title>
     <meta name="description" content="Local academic suite for AES-256-GCM encrypted LSB audio steganography and numerical quality evaluation.">
 
-    <!-- Pre-render theme initialization to prevent flash of wrong theme (FOUC) -->
-    <script>
-        (function() {
-            try {
-                var saved = localStorage.getItem('cryptaudio_theme');
-                if (saved === 'dark') {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                } else {
-                    document.documentElement.setAttribute('data-theme', 'light');
-                }
-            } catch (e) {
-                document.documentElement.setAttribute('data-theme', 'light');
-            }
-        })();
-    </script>
+    <!-- Theme initialization script executed synchronously in <head> to prevent FOUC without inline JS -->
+    <script src="/static/js/theme.js"></script>
 
     <!-- Design Tokens & Master Stylesheet -->
     <link rel="stylesheet" href="/static/css/variables.css">
@@ -185,6 +172,33 @@
                         </p>
                     </div>
 
+                    <!-- Compact Technical Summary Bar (Phase 10.1) -->
+                    <div class="technical-summary-bar">
+                        <div class="tech-item">
+                            <span class="tech-label">Backend Connection</span>
+                            <span class="tech-val" id="dash-backend-status">
+                                <span class="status-dot checking" id="dash-backend-dot"></span>
+                                <span id="dash-backend-text">Connecting...</span>
+                            </span>
+                        </div>
+                        <div class="tech-item">
+                            <span class="tech-label">Cryptographic Cipher</span>
+                            <span class="tech-val">AES-256-GCM</span>
+                        </div>
+                        <div class="tech-item">
+                            <span class="tech-label">Key Derivation</span>
+                            <span class="tech-val">PBKDF2-HMAC-SHA256 (600,000 rds)</span>
+                        </div>
+                        <div class="tech-item">
+                            <span class="tech-label">Audio Carrier Support</span>
+                            <span class="tech-val">PCM WAV (8, 16, 24, 32-bit)</span>
+                        </div>
+                        <div class="tech-item">
+                            <span class="tech-label">Maximum Upload Size</span>
+                            <span class="tech-val">50 MB per request</span>
+                        </div>
+                    </div>
+
                     <!-- Core Feature Navigation Cards -->
                     <div class="grid-2">
                         <div class="feature-card">
@@ -299,7 +313,7 @@
                     </div>
 
                     <div class="card">
-                        <form id="form-embed" onsubmit="return false;">
+                        <form id="form-embed">
                             <!-- Dropzone for Carrier WAV -->
                             <div class="form-group">
                                 <label class="form-label">1. Carrier WAV Audio File</label>
@@ -359,14 +373,46 @@
                                 </div>
                             </div>
 
-                            <!-- Theoretical Capacity Meter -->
+                            <!-- Detailed Capacity Calculation & Framing Panel (Phase 10.1) -->
                             <div class="capacity-container">
                                 <div class="capacity-header">
-                                    <span class="capacity-title">Estimated LSB Capacity Utilization</span>
-                                    <span id="embed-capacity-percent" class="capacity-metric">0.00% utilized</span>
+                                    <span class="capacity-title">LSB Capacity &amp; Framing Calculation</span>
+                                    <span id="embed-capacity-percent" class="capacity-metric">0.00% utilized (Carrier not selected)</span>
                                 </div>
                                 <div class="progress-bar-bg">
-                                    <div id="embed-capacity-fill" class="progress-bar-fill safe" style="width: 1%;"></div>
+                                    <div id="embed-capacity-fill" class="progress-bar-fill safe" style="width: 0%;"></div>
+                                </div>
+                                <div class="capacity-breakdown-grid">
+                                    <div class="cap-item">
+                                        <div class="cap-label">Original Message Size</div>
+                                        <div id="embed-cap-msg-size" class="cap-val">0 B (0 chars)</div>
+                                        <div class="cap-sub">UTF-8 encoded plaintext</div>
+                                    </div>
+                                    <div class="cap-item">
+                                        <div class="cap-label">Encrypted Payload Size</div>
+                                        <div id="embed-cap-crypto-size" class="cap-val">0 B</div>
+                                        <div class="cap-sub">Plaintext + 33B header + 16B tag (+49 B)</div>
+                                    </div>
+                                    <div class="cap-item">
+                                        <div class="cap-label">Framed Payload Size</div>
+                                        <div id="embed-cap-framed-size" class="cap-val">0 B</div>
+                                        <div class="cap-sub">Encrypted payload + 13B LSB header (+13 B)</div>
+                                    </div>
+                                    <div class="cap-item">
+                                        <div class="cap-label">Required Samples</div>
+                                        <div id="embed-cap-req-samples" class="cap-val">0 samples</div>
+                                        <div class="cap-sub">Framed payload &times; 8 bits (1 bit/sample)</div>
+                                    </div>
+                                    <div class="cap-item">
+                                        <div class="cap-label">Available Carrier Samples</div>
+                                        <div id="embed-cap-avail-samples" class="cap-val">Select carrier WAV</div>
+                                        <div class="cap-sub">Total samples (Frames &times; Channels)</div>
+                                    </div>
+                                    <div class="cap-item">
+                                        <div class="cap-label">Maximum Plaintext Capacity</div>
+                                        <div id="embed-cap-max-plaintext" class="cap-val">—</div>
+                                        <div class="cap-sub">Raw capacity &minus; 62 B overhead</div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -401,19 +447,19 @@
                         </p>
                         <div class="grid-3" style="margin-bottom: 1.25rem;">
                             <div class="stat-card">
-                                <div class="stat-label">Payload Size</div>
+                                <div class="stat-label">Encrypted Payload Size</div>
                                 <div id="embed-result-payload-size" class="stat-value">0 B</div>
-                                <div class="stat-desc">Plaintext message</div>
+                                <div class="stat-desc">Crypto header + ciphertext + GCM tag</div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-label">Framed Size</div>
+                                <div class="stat-label">Framed Payload Size</div>
                                 <div id="embed-result-framed-size" class="stat-value">0 B</div>
-                                <div class="stat-desc">Ciphertext + Headers</div>
+                                <div class="stat-desc">Encrypted payload + 13-byte LSB framing header</div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-label">LSB Utilization</div>
+                                <div class="stat-label">LSB Capacity Utilization</div>
                                 <div id="embed-result-utilization" class="stat-value">0.00%</div>
-                                <div class="stat-desc">Carrier signal modified</div>
+                                <div class="stat-desc">Required samples / Available samples</div>
                             </div>
                         </div>
                         <button id="btn-download-stego" class="btn btn-primary">
@@ -437,7 +483,7 @@
                     </div>
 
                     <div class="card">
-                        <form id="form-extract" onsubmit="return false;">
+                        <form id="form-extract">
                             <div class="form-group">
                                 <label class="form-label">1. Stego WAV Audio File</label>
                                 <div class="dropzone" data-preview="extract-file-preview">
@@ -507,15 +553,46 @@
                             <span class="badge-academic" style="background-color: var(--color-success-bg); color: var(--color-success); border-color: var(--color-success-border);">Verified</span>
                         </div>
 
+                        <!-- Compact Result Summary (Phase 10.1) -->
+                        <div class="extract-summary-bar">
+                            <div class="summary-pill">
+                                <span class="summary-pill-label">Extraction:</span>
+                                <span class="summary-pill-val success">Successful</span>
+                            </div>
+                            <div class="summary-pill">
+                                <span class="summary-pill-label">Authentication:</span>
+                                <span class="summary-pill-val success">Verified (AES-GCM)</span>
+                            </div>
+                            <div class="summary-pill">
+                                <span class="summary-pill-label">Decryption:</span>
+                                <span class="summary-pill-val success">Successful (PBKDF2)</span>
+                            </div>
+                            <div class="summary-pill">
+                                <span class="summary-pill-label">Characters:</span>
+                                <span id="extract-summary-chars" class="summary-pill-val mono">0</span>
+                            </div>
+                            <div class="summary-pill">
+                                <span class="summary-pill-label">UTF-8 Bytes:</span>
+                                <span id="extract-summary-bytes" class="summary-pill-val mono">0 B</span>
+                            </div>
+                        </div>
+
                         <div id="recovered-message-text" class="payload-display"></div>
 
                         <div class="copy-toolbar">
-                            <button class="btn btn-secondary btn-sm" data-copy-target="recovered-message-text">
+                            <button id="btn-copy-recovered" type="button" class="btn btn-secondary btn-sm" data-copy-target="recovered-message-text">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                                 </svg>
                                 Copy Message to Clipboard
+                            </button>
+                            <button id="btn-clear-recovered" type="button" class="btn btn-outline-danger btn-sm">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                                Clear Recovered Message
                             </button>
                         </div>
                     </div>
@@ -602,12 +679,42 @@
                         <div class="stat-card">
                             <div class="stat-label">Raw LSB Capacity</div>
                             <div id="inspect-raw-capacity" class="stat-value">0 B</div>
-                            <div class="stat-desc">1 bit per audio sample</div>
+                            <div class="stat-desc">Total samples &divide; 8 (1 bit per sample)</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-label">Usable Payload</div>
+                            <div class="stat-label">Max Plaintext Capacity</div>
                             <div id="inspect-usable-capacity" class="stat-value">0 B</div>
-                            <div class="stat-desc">Excluding 46 B protocol headers</div>
+                            <div class="stat-desc">Raw capacity &minus; 62 B protocol overhead</div>
+                        </div>
+                    </div>
+
+                    <!-- Protocol Overhead Breakdown Panel (Phase 10.1) -->
+                    <div id="inspect-overhead-panel" class="card" style="margin-top: 1.5rem; display: none;">
+                        <div class="card-header">
+                            <div>
+                                <h3 class="card-title">Protocol Overhead &amp; Capacity Allocation</h3>
+                                <p class="card-subtitle">Detailed breakdown of protocol headers and plaintext capacity budget</p>
+                            </div>
+                        </div>
+                        <div class="grid-3">
+                            <div class="breakdown-card">
+                                <div class="breakdown-title">LSB Framing Header</div>
+                                <div class="breakdown-val">13 Bytes (104 bits)</div>
+                                <div class="breakdown-desc">Magic <code>CSLB</code> (4B) + Version (1B) + Length (4B) + CRC32 (4B)</div>
+                            </div>
+                            <div class="breakdown-card">
+                                <div class="breakdown-title">Crypto Protocol Header</div>
+                                <div class="breakdown-val">33 Bytes (264 bits)</div>
+                                <div class="breakdown-desc">Magic <code>CAUD</code> (4B) + Version (1B) + Salt (16B) + Nonce (12B)</div>
+                            </div>
+                            <div class="breakdown-card">
+                                <div class="breakdown-title">GCM Authentication Tag</div>
+                                <div class="breakdown-val">16 Bytes (128 bits)</div>
+                                <div class="breakdown-desc">128-bit integrity &amp; authenticity verification tag</div>
+                            </div>
+                        </div>
+                        <div class="callout-note" style="margin-top: 1rem;">
+                            <strong>Capacity Equation:</strong> Maximum Plaintext Capacity = <code>Raw LSB Capacity &minus; 62 Bytes</code>. Fixed framing overhead (13B) + crypto header (33B) + auth tag (16B) total exactly 62 bytes (496 samples).
                         </div>
                     </div>
                 </section>
@@ -690,22 +797,41 @@
                             <div class="stat-card">
                                 <div class="stat-label">Mean Squared Error (MSE)</div>
                                 <div id="analyze-mse" class="stat-value">0.000000</div>
-                                <div class="stat-desc">Signal energy deviation</div>
+                                <div class="stat-desc">Lower MSE indicates smaller average squared numerical difference</div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Signal-to-Noise (SNR)</div>
                                 <div id="analyze-snr" class="stat-value">0.00 dB</div>
-                                <div class="stat-desc">Dominant carrier ratio</div>
+                                <div class="stat-desc">Higher SNR generally indicates lower relative distortion</div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Peak SNR (PSNR)</div>
                                 <div id="analyze-psnr" class="stat-value">0.00 dB</div>
-                                <div class="stat-desc">> 50 dB indicates transparent</div>
+                                <div id="analyze-psnr-desc" class="stat-desc">Illustrative numerical fidelity bands (> 50 dB: Very high)</div>
                             </div>
                             <div class="stat-card">
                                 <div class="stat-label">Pearson Correlation (r)</div>
                                 <div id="analyze-correlation" class="stat-value">1.000000</div>
-                                <div class="stat-desc">1.000000 = identical</div>
+                                <div id="analyze-corr-desc" class="stat-desc">r = 1.000000 &mdash; Perfect positive linear correlation</div>
+                            </div>
+                        </div>
+
+                        <!-- Modified Samples Tracking (Phase 10.1) -->
+                        <div class="grid-3" style="margin-bottom: 1.5rem;">
+                            <div class="stat-card">
+                                <div class="stat-label">Total Audio Samples</div>
+                                <div id="analyze-total-samples" class="stat-value">0</div>
+                                <div class="stat-desc">Frames &times; Channels compared</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Modified Audio Samples</div>
+                                <div id="analyze-modified-samples" class="stat-value">0</div>
+                                <div class="stat-desc">Samples with modified LSB bits</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Modified Sample Percentage</div>
+                                <div id="analyze-modified-percent" class="stat-value">0.0000%</div>
+                                <div class="stat-desc">(Modified samples &divide; Total samples) &times; 100%</div>
                             </div>
                         </div>
 
@@ -722,29 +848,37 @@
                                 <tr>
                                     <td>PSNR</td>
                                     <td id="analyze-table-psnr">0.00 dB</td>
-                                    <td>&gt; 40 dB (Acceptable), &gt; 50 dB (Imperceptible)</td>
-                                    <td>Imperceptible to human auditory system</td>
+                                    <td>&gt; 50 dB (Very high), 40&ndash;50 dB (High), 30&ndash;40 dB (Moderate), &lt; 30 dB (Lower)</td>
+                                    <td>Illustrative numerical fidelity bands; not a proof of inaudibility</td>
                                 </tr>
                                 <tr>
                                     <td>SNR</td>
                                     <td id="analyze-table-snr">0.00 dB</td>
-                                    <td>&gt; 35 dB (High Quality)</td>
-                                    <td>LSB modification acts as sub-audible noise</td>
+                                    <td>Higher values indicate lower relative noise</td>
+                                    <td>Carrier signal power relative to embedding noise power</td>
                                 </tr>
                                 <tr>
                                     <td>MSE</td>
-                                    <td id="analyze-table-mse">0.0</td>
-                                    <td>Approaching 0.0</td>
-                                    <td>Energy difference between waveforms</td>
+                                    <td id="analyze-table-mse">0.000000</td>
+                                    <td>Approaching 0.000000</td>
+                                    <td>Average squared numerical deviation between audio samples</td>
                                 </tr>
                                 <tr>
                                     <td>Pearson Correlation (r)</td>
                                     <td id="analyze-table-correlation">1.000000</td>
-                                    <td>&gt; 0.990000</td>
-                                    <td>Waveform alignment correlation</td>
+                                    <td>r = 1.000000</td>
+                                    <td>Perfect positive linear correlation; does not imply identical waveforms</td>
                                 </tr>
                             </tbody>
                         </table>
+
+                        <!-- Quality Disclaimer Callout (Phase 10.1) -->
+                        <div class="doc-callout warning" style="margin-top: 1.25rem; margin-bottom: 0;">
+                            <div class="doc-callout-title">Quality Evaluation Disclaimer</div>
+                            <p style="margin: 0; color: var(--text-secondary);">
+                                Numerical signal-quality metrics describe differences between audio samples. They do not independently establish subjective inaudibility. Listening tests may be required for perceptual evaluation.
+                            </p>
+                        </div>
                     </div>
                 </section>
 
@@ -761,57 +895,221 @@
                         <div class="doc-section">
                             <h2 class="doc-h2">1. What is Audio Steganography?</h2>
                             <p class="doc-p">
-                                Steganography is the science of concealing the existence of communication. Unlike traditional cryptography which protects message secrecy but leaves ciphertext openly visible, steganography embeds confidential information into an innocent cover media (such as audio, image, or video) so that casual observers cannot detect that secret communication is occurring.
+                                Steganography aims to conceal the existence of communication by embedding information inside an innocent-looking carrier. Unlike traditional cryptography which protects message secrecy but leaves ciphertext openly visible, steganography conceals the transmission itself within carrier media (such as audio waveforms). Detection remains possible through statistical analysis and steganalysis.
                             </p>
                             <p class="doc-p">
-                                <strong>CryptAudio Web</strong> combines both paradigms: the message is first encrypted using authenticated cryptography so that even if the stego carrier is intercepted, the adversary cannot decipher the contents without the secret key.
+                                <strong>CryptAudio Web</strong> combines both paradigms: the confidential message is first encrypted using authenticated symmetric cryptography (AES-256-GCM) so that even if the hidden payload is discovered or extracted, an adversary cannot decipher the contents without the authorized passphrase.
                             </p>
                         </div>
 
+                        <!-- Steganographic System Architecture Diagram (Phase 10.1) -->
                         <div class="doc-section">
-                            <h2 class="doc-h2">2. Cryptographic Security Engine</h2>
+                            <h2 class="doc-h2">2. End-to-End System Architecture</h2>
                             <p class="doc-p">
-                                CryptAudio Web uses <strong>AES-256-GCM</strong> (Galois/Counter Mode), an authenticated encryption with associated data (AEAD) cipher standard approved by NIST:
+                                The diagram below outlines the verified multi-stage sender and receiver pipelines implemented in CryptAudio Web:
                             </p>
-                            <ul style="margin-left: 1.5rem; margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.9375rem;">
-                                <li><strong>Key Derivation:</strong> Passwords are transformed into 256-bit AES keys via <code>PBKDF2-HMAC-SHA256</code> utilizing <strong>600,000 iterations</strong> and a fresh 16-byte cryptographically random salt per encryption (OWASP 2023 recommendation).</li>
-                                <li><strong>Fresh Nonce:</strong> A 12-byte cryptographically random nonce is generated for every message, preventing replay and keystream reuse attacks.</li>
-                                <li><strong>Integrity Authentication:</strong> A 128-bit (16-byte) GCM authentication tag authenticates the ciphertext and header parameters, guaranteeing message tampering detection.</li>
-                            </ul>
+                            <div class="arch-diagram">
+                                <!-- SENDER COLUMN -->
+                                <div class="arch-column">
+                                    <div class="arch-col-header sender">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                        </svg>
+                                        Sender Pipeline
+                                    </div>
+                                    <div class="arch-step-list">
+                                        <div class="arch-step-box">
+                                            <div class="arch-step-num">1</div>
+                                            <div class="arch-step-content">
+                                                <div class="arch-step-title">Secret Plaintext Message</div>
+                                                <div class="arch-step-detail">Arbitrary UTF-8 text encoded to raw byte stream</div>
+                                            </div>
+                                        </div>
+                                        <div class="arch-step-arrow">&darr;</div>
+                                        <div class="arch-step-box">
+                                            <div class="arch-step-num">2</div>
+                                            <div class="arch-step-content">
+                                                <div class="arch-step-title">PBKDF2 Key Derivation</div>
+                                                <div class="arch-step-detail">Derives 256-bit key using passphrase, 16B salt, and 600,000 rounds</div>
+                                            </div>
+                                        </div>
+                                        <div class="arch-step-arrow">&darr;</div>
+                                        <div class="arch-step-box">
+                                            <div class="arch-step-num">3</div>
+                                            <div class="arch-step-content">
+                                                <div class="arch-step-title">AES-256-GCM Encryption</div>
+                                                <div class="arch-step-detail">Encrypts with 12B nonce; prepends 33B header + 16B GCM tag (+49 B)</div>
+                                            </div>
+                                        </div>
+                                        <div class="arch-step-arrow">&darr;</div>
+                                        <div class="arch-step-box">
+                                            <div class="arch-step-num">4</div>
+                                            <div class="arch-step-content">
+                                                <div class="arch-step-title">LSB Framing Encapsulation</div>
+                                                <div class="arch-step-detail">Prepends 13B header: Magic CSLB + Version 1 + Length + CRC32 (+13 B)</div>
+                                            </div>
+                                        </div>
+                                        <div class="arch-step-arrow">&darr;</div>
+                                        <div class="arch-step-box">
+                                            <div class="arch-step-num">5</div>
+                                            <div class="arch-step-content">
+                                                <div class="arch-step-title">Sample-Level LSB Embedding</div>
+                                                <div class="arch-step-detail">Replaces sample least significant bits (1 bit per audio sample)</div>
+                                            </div>
+                                        </div>
+                                        <div class="arch-step-arrow">&darr;</div>
+                                        <div class="arch-step-box">
+                                            <div class="arch-step-num">6</div>
+                                            <div class="arch-step-content">
+                                                <div class="arch-step-title">Stego WAV Output</div>
+                                                <div class="arch-step-detail">Writes verified uncompressed integer PCM WAV audio file</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- RECEIVER COLUMN -->
+                                <div class="arch-column">
+                                    <div class="arch-col-header receiver">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                        Receiver Pipeline
+                                    </div>
+                                    <div class="arch-step-list">
+                                        <div class="arch-step-box">
+                                            <div class="arch-step-num">1</div>
+                                            <div class="arch-step-content">
+                                                <div class="arch-step-title">Stego WAV Audio Input</div>
+                                                <div class="arch-step-detail">Validates uncompressed PCM audio structure and sample format</div>
+                                            </div>
+                                        </div>
+                                        <div class="arch-step-arrow">&darr;</div>
+                                        <div class="arch-step-box">
+                                            <div class="arch-step-num">2</div>
+                                            <div class="arch-step-content">
+                                                <div class="arch-step-title">LSB Sample Extraction</div>
+                                                <div class="arch-step-detail">Extracts 104-bit header, parses payload length, and reads payload bits</div>
+                                            </div>
+                                        </div>
+                                        <div class="arch-step-arrow">&darr;</div>
+                                        <div class="arch-step-box">
+                                            <div class="arch-step-num">3</div>
+                                            <div class="arch-step-content">
+                                                <div class="arch-step-title">Framing &amp; CRC32 Validation</div>
+                                                <div class="arch-step-detail">Validates CSLB magic, version, and verifies payload CRC32 checksum</div>
+                                            </div>
+                                        </div>
+                                        <div class="arch-step-arrow">&darr;</div>
+                                        <div class="arch-step-box">
+                                            <div class="arch-step-num">4</div>
+                                            <div class="arch-step-content">
+                                                <div class="arch-step-title">AES-GCM Authentication</div>
+                                                <div class="arch-step-detail">Derives key from passphrase; verifies 16B GCM tag and 33B header AAD</div>
+                                            </div>
+                                        </div>
+                                        <div class="arch-step-arrow">&darr;</div>
+                                        <div class="arch-step-box">
+                                            <div class="arch-step-num">5</div>
+                                            <div class="arch-step-content">
+                                                <div class="arch-step-title">Authenticated Decryption</div>
+                                                <div class="arch-step-detail">Decrypts ciphertext into original plaintext bytes using AES-256</div>
+                                            </div>
+                                        </div>
+                                        <div class="arch-step-arrow">&darr;</div>
+                                        <div class="arch-step-box">
+                                            <div class="arch-step-num">6</div>
+                                            <div class="arch-step-content">
+                                                <div class="arch-step-title">Original Plaintext Recovery</div>
+                                                <div class="arch-step-detail">Decodes UTF-8 string and safely renders in client interface</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
+                        <!-- Cryptographic Specifications Cards (Phase 10.1) -->
                         <div class="doc-section">
-                            <h2 class="doc-h2">3. Least Significant Bit (LSB) Embedding</h2>
+                            <h2 class="doc-h2">3. Cryptographic Security Specifications</h2>
                             <p class="doc-p">
-                                Digital audio represents acoustic sound pressure levels as discrete numerical samples (e.g. 16-bit integers between -32,768 and +32,767). The Least Significant Bit (LSB) is the bit with the lowest numerical weight ($2^0 = 1$).
+                                CryptAudio Web strictly enforces NIST-approved authenticated encryption with associated data (AEAD) and OWASP key derivation recommendations:
                             </p>
+                            <div class="crypto-specs-grid">
+                                <div class="crypto-spec-card">
+                                    <div class="crypto-spec-title">Symmetric Cipher</div>
+                                    <div class="crypto-spec-val">AES-256-GCM</div>
+                                    <div class="crypto-spec-desc">NIST-approved authenticated encryption with 256-bit key</div>
+                                </div>
+                                <div class="crypto-spec-card">
+                                    <div class="crypto-spec-title">Key Derivation</div>
+                                    <div class="crypto-spec-val">PBKDF2-HMAC-SHA256</div>
+                                    <div class="crypto-spec-desc">600,000 iterations &bull; OWASP password hashing recommendation</div>
+                                </div>
+                                <div class="crypto-spec-card">
+                                    <div class="crypto-spec-title">Derived Key Size</div>
+                                    <div class="crypto-spec-val">32 Bytes (256 bits)</div>
+                                    <div class="crypto-spec-desc">Cryptographically strong key derived per encryption operation</div>
+                                </div>
+                                <div class="crypto-spec-card">
+                                    <div class="crypto-spec-title">KDF Salt</div>
+                                    <div class="crypto-spec-val">16 Bytes (128 bits)</div>
+                                    <div class="crypto-spec-desc">Fresh CSPRNG random salt generated per encryption</div>
+                                </div>
+                                <div class="crypto-spec-card">
+                                    <div class="crypto-spec-title">Initialization Nonce</div>
+                                    <div class="crypto-spec-val">12 Bytes (96 bits)</div>
+                                    <div class="crypto-spec-desc">Unique CSPRNG nonce per message preventing keystream reuse</div>
+                                </div>
+                                <div class="crypto-spec-card">
+                                    <div class="crypto-spec-title">Authentication Tag</div>
+                                    <div class="crypto-spec-val">16 Bytes (128 bits)</div>
+                                    <div class="crypto-spec-desc">GCM MAC tag authenticating ciphertext and 33B header AAD</div>
+                                </div>
+                                <div class="crypto-spec-card">
+                                    <div class="crypto-spec-title">Crypto Protocol Header</div>
+                                    <div class="crypto-spec-val">33 Bytes fixed</div>
+                                    <div class="crypto-spec-desc">Magic CAUD (4B) + Version (1B) + Salt (16B) + Nonce (12B)</div>
+                                </div>
+                                <div class="crypto-spec-card">
+                                    <div class="crypto-spec-title">LSB Framing Header</div>
+                                    <div class="crypto-spec-val">13 Bytes fixed</div>
+                                    <div class="crypto-spec-desc">Magic CSLB (4B) + Version (1B) + Length (4B) + CRC32 (4B)</div>
+                                </div>
+                            </div>
+
                             <p class="doc-p">
-                                CryptAudio substitutes the LSB of individual audio samples with consecutive bits of the encrypted payload. Modifying an individual sample's LSB alters its amplitude by at most 1 unit in a range of tens of thousands, which falls far below the human ear's perceptual threshold (Differential Limen for Intensity).
-                            </p>
-                            <p class="doc-p">
-                                The embedded data begins with a 13-byte protocol header:
-                                <code>[ 'C' 'S' 'L' 'B' ] [ 1 byte Version ] [ 4 bytes Payload Length ] [ 4 bytes CRC32 ]</code>.
+                                A cryptographically random 12-byte nonce is generated for every encryption operation. Nonce uniqueness is essential for AES-GCM security and prevents dangerous nonce reuse. CryptAudio does not currently implement a separate message freshness or replay-detection mechanism.
                             </p>
                         </div>
 
+                        <!-- Steganography Details & Perceptual Impact -->
                         <div class="doc-section">
-                            <h2 class="doc-h2">4. Why Uncompressed PCM WAV?</h2>
+                            <h2 class="doc-h2">4. Least Significant Bit (LSB) Embedding &amp; Audio Format</h2>
+                            <p class="doc-p">
+                                Digital audio represents acoustic sound pressure levels as discrete numerical samples (e.g. 16-bit signed integers between &minus;32,768 and +32,767). The Least Significant Bit (LSB) is the bit with the lowest numerical weight ($2^0 = 1$).
+                            </p>
+                            <p class="doc-p">
+                                Changing the least significant bit generally produces a small numerical change in a PCM sample. The perceptual effect depends on the audio content and listening conditions.
+                            </p>
                             <p class="doc-p">
                                 CryptAudio strictly requires uncompressed Pulse Code Modulation (PCM) in RIFF WAVE (.wav) containers. Unlike lossy formats, linear PCM stores the exact digital sample amplitudes without psychoacoustic quantization or lossy transform coding.
                             </p>
                         </div>
 
+                        <!-- Academic Limitations & Threat Model Panel (Phase 10.1) -->
                         <div class="doc-section">
-                            <h2 class="doc-h2">5. Academic Limitations & Threat Model</h2>
+                            <h2 class="doc-h2">5. Academic Limitations &amp; Threat Model</h2>
                             <div class="doc-callout warning">
-                                <div class="doc-callout-title">Important Academic Notice</div>
-                                <p>
+                                <div class="doc-callout-title">Important Academic Notice &amp; Threat Boundaries</div>
+                                <p style="margin-bottom: 0.5rem;">
                                     LSB steganography is fragile by design and is <strong>not</strong> mathematically undetectable:
                                 </p>
                                 <ul style="margin-left: 1.25rem; margin-top: 0.5rem; line-height: 1.5;">
                                     <li><strong>Lossy Recompression:</strong> Converting a stego WAV to MP3, AAC, OGG, or Opus applies psychoacoustic lossy transforms that permanently erase the embedded LSB data.</li>
                                     <li><strong>Audio Signal Processing:</strong> Resampling, equalization, normalization, pitch-shifting, or reverb alters sample amplitudes and corrupts the hidden bits.</li>
                                     <li><strong>Steganalysis Susceptibility:</strong> Statistical steganalysis techniques (such as Chi-squared testing, sample pair analysis, or higher-order Markov modeling) can detect artificial alterations to the natural LSB distribution in audio carriers.</li>
+                                    <li><strong>Numerical vs Perceptual Metrics:</strong> Peak Signal-to-Noise Ratio (PSNR) and Signal-to-Noise Ratio (SNR) are numerical signal-quality metrics. High numerical fidelity indicates small mathematical differences, but does not prove subjective perceptual inaudibility.</li>
                                 </ul>
                             </div>
                         </div>
@@ -826,7 +1124,6 @@
     <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
     <!-- Application Scripts -->
-    <script src="/static/js/theme.js"></script>
     <script src="/static/js/api.js"></script>
     <script src="/static/js/app.js"></script>
 </body>

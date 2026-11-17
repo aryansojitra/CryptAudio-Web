@@ -1,9 +1,25 @@
 /**
- * CryptAudio Web — Theme Manager (Phase 9)
+ * CryptAudio Web — Theme Manager (Phase 9 & 11.1)
  *
  * Implements Light Theme as primary/default with optional Dark Theme toggle.
  * Manages localStorage persistence, root attribute 'data-theme', and UI iconography.
  */
+
+// Immediate pre-render theme application to prevent Flash of Unstyled/Wrong Theme (FOUC)
+// Runs synchronously in <head> before DOM parsing without requiring inline script
+(function () {
+  'use strict';
+  try {
+    var saved = localStorage.getItem('cryptaudio_theme');
+    if (saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  } catch (e) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
 
 (function () {
   'use strict';

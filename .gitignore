@@ -46,6 +46,11 @@ generated_audio/
 test_audio/
 *.wav.out
 
+# --- Distribution Archives ---
+*.zip
+*.tar.gz
+*.tgz
+
 # --- OS Metadata ---
 .DS_Store
 Thumbs.db

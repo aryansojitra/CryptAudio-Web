@@ -37,10 +37,10 @@ REQUIRED_DIRS = [
     "app/steganography",
     "app/services",
     "app/evaluation",
-    "app/static",
-    "app/static/css",
-    "app/static/js",
-    "app/static/assets",
+    "frontend",
+    "frontend/css",
+    "frontend/js",
+    "frontend/assets",
     "tests",
     "scripts",
     "temporary",
@@ -71,7 +71,7 @@ REQUIRED_FILES = [
     "app/steganography/__init__.py",
     "app/services/__init__.py",
     "app/evaluation/__init__.py",
-    "app/static/index.html",
+    "frontend/index.html",
     "temporary/.gitkeep",
     "scripts/verify_environment.py",
 ]
@@ -96,7 +96,7 @@ REQUIRED_PACKAGES = [
     ("matplotlib", "Matplotlib"),
     ("pytest", "pytest"),
     ("httpx", "HTTPX"),
-    ("multipart", "python-multipart"),
+    ("python_multipart", "python-multipart"),
     ("wave", "wave (stdlib)"),
 ]
 

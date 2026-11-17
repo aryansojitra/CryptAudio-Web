@@ -8,6 +8,7 @@ Phase 2: Backend Foundation
 from __future__ import annotations
 
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -33,8 +34,36 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 BASE_DIR = Path(__file__).resolve().parent          # app/
-STATIC_DIR = BASE_DIR / "static"                   # app/static/
-INDEX_HTML = STATIC_DIR / "index.html"
+PROJECT_ROOT = BASE_DIR.parent                      # Project root
+FRONTEND_DIR = PROJECT_ROOT / "frontend"           # frontend/
+INDEX_HTML = FRONTEND_DIR / "index.html"
+
+# ---------------------------------------------------------------------------
+# Application Lifespan (Startup & Shutdown Lifecycle)
+# ---------------------------------------------------------------------------
+
+def cleanup_orphaned_temp_files() -> int:
+    """Clean any orphaned temporary files on application startup or maintenance."""
+    count = 0
+    try:
+        if settings.TEMP_DIR.exists():
+            for tmp_file in settings.TEMP_DIR.glob("*.wav"):
+                try:
+                    tmp_file.unlink(missing_ok=True)
+                    count += 1
+                except OSError:
+                    pass
+    except Exception as exc:
+        logger.warning("Failed to clean temporary directory: %s", exc)
+    return count
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Clean any orphaned temporary files on application startup."""
+    cleanup_orphaned_temp_files()
+    yield
+
 
 # ---------------------------------------------------------------------------
 # Application factory
@@ -44,10 +73,65 @@ app = FastAPI(
     title=settings.APP_TITLE,
     description=settings.APP_DESCRIPTION,
     version=settings.APP_VERSION,
+    lifespan=lifespan,
     # Swagger UI available at /docs; ReDoc at /redoc
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# ---------------------------------------------------------------------------
+# Security Headers Middleware
+# ---------------------------------------------------------------------------
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    """
+    Enforce browser security headers across all responses:
+    - X-Content-Type-Options: nosniff
+    - X-Frame-Options: DENY
+    - Referrer-Policy: no-referrer
+    - X-XSS-Protection: 0
+    - Content-Security-Policy (CSP)
+    - Anti-caching for sensitive /api/* requests
+    """
+    response = await call_next(request)
+
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-XSS-Protection"] = "0"
+
+    # Dedicated Content-Security-Policy:
+    # - Swagger UI (/docs, /redoc, /openapi.json) requires Swagger UI assets
+    # - Application routes (/, /static/*, /api/*) enforce hardened CSP with NO CDN and NO unsafe-inline scripts
+    if request.url.path in ("/docs", "/redoc", "/openapi.json"):
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "img-src 'self' data: https://fastapi.tiangolo.com; "
+            "connect-src 'self';"
+        )
+    else:
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; "
+            "media-src 'self' blob:; "
+            "connect-src 'self'; "
+            "object-src 'none'; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self';"
+        )
+
+    if request.url.path.startswith("/api"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+
+    return response
 
 # ---------------------------------------------------------------------------
 # API routes  (/api/*)
@@ -61,7 +145,7 @@ app.include_router(api_router)
 
 app.mount(
     "/static",
-    StaticFiles(directory=str(STATIC_DIR)),
+    StaticFiles(directory=str(FRONTEND_DIR)),
     name="static",
 )
 
@@ -116,7 +200,10 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     return JSONResponse(
         status_code=500,
         content={
-            "error": "internal_server_error",
-            "message": "An unexpected error occurred. Please try again.",
+            "success": False,
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "An unexpected error occurred. Please try again.",
+            },
         },
     )

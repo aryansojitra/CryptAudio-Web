@@ -13,6 +13,7 @@ Provides modular, secure, and robust handling of PCM WAV files:
 from __future__ import annotations
 
 import os
+import struct
 import wave
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -26,6 +27,15 @@ SUPPORTED_CHANNELS: Final[frozenset[int]] = frozenset({1, 2})  # Mono (1), Stere
 SUPPORTED_SAMPLE_WIDTHS: Final[frozenset[int]] = frozenset({1, 2, 3, 4})  # 8, 16, 24, 32-bit
 MIN_SAMPLE_RATE: Final[int] = 8_000
 MAX_SAMPLE_RATE: Final[int] = 384_000
+
+# Format tags and GUIDs
+WAVE_FORMAT_PCM: Final[int] = 0x0001
+WAVE_FORMAT_IEEE_FLOAT: Final[int] = 0x0003
+WAVE_FORMAT_EXTENSIBLE: Final[int] = 0xFFFE
+
+# Standard SubFormat GUIDs (16 bytes, little-endian Data1..3, big-endian Data4)
+KSDATAFORMAT_SUBTYPE_PCM: Final[bytes] = b"\x01\x00\x00\x00\x00\x00\x10\x00\x80\x00\x00\xaa\x00\x38\x9b\x71"
+KSDATAFORMAT_SUBTYPE_IEEE_FLOAT: Final[bytes] = b"\x03\x00\x00\x00\x00\x00\x10\x00\x80\x00\x00\xaa\x00\x38\x9b\x71"
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +122,149 @@ class WavCapacity:
 # Validation Logic
 # ---------------------------------------------------------------------------
 
+def _verify_riff_wave_format(path: Path) -> None:
+    """
+    Perform low-level RIFF/WAVE container and chunk validation.
+
+    Ensures:
+    - File starts with valid RIFF header containing a WAVE container
+    - Distinguishes integer PCM from IEEE Float and other compressed codecs
+    - Validates WAVE_FORMAT_EXTENSIBLE headers, cbSize >= 22, and SubFormat GUIDs
+    - Rejects partial bit depths (e.g. 18-bit valid inside 24-bit container)
+    - Validates block alignment (channels * sample_width)
+    - Rejects truncated or malformed chunks
+    """
+    try:
+        file_size = path.stat().st_size
+    except OSError as exc:
+        raise AudioReadError(f"Cannot access audio file: {path}") from exc
+
+    if file_size < 12:
+        raise InvalidWavError(f"WAV file header too short ({file_size} bytes): {path.name}")
+
+    try:
+        with path.open("rb") as f:
+            header = f.read(12)
+            if len(header) < 12:
+                raise InvalidWavError(f"WAV file truncated: {path.name}")
+
+            riff_tag, riff_size, wave_tag = struct.unpack("<4sI4s", header)
+            if riff_tag != b"RIFF" or wave_tag != b"WAVE":
+                raise InvalidWavError(f"File is not a valid RIFF/WAVE audio file: {path.name}")
+
+            fmt_found = False
+            offset = 12
+
+            while offset < file_size:
+                chunk_header = f.read(8)
+                if len(chunk_header) == 0:
+                    break
+                if len(chunk_header) < 8:
+                    raise InvalidWavError(f"Malformed WAV file: truncated chunk header in {path.name}")
+
+                chunk_id, chunk_size = struct.unpack("<4sI", chunk_header)
+                offset += 8
+
+                if offset + chunk_size > file_size:
+                    raise InvalidWavError(
+                        f"Malformed WAV file: chunk {chunk_id.decode('latin1', errors='replace')} claims {chunk_size} bytes, "
+                        f"exceeding file size ({file_size} bytes) in {path.name}"
+                    )
+
+                if chunk_id == b"fmt ":
+                    fmt_data = f.read(chunk_size)
+                    offset += chunk_size
+                    fmt_found = True
+
+                    if len(fmt_data) < 16:
+                        raise InvalidWavError(
+                            f"Malformed WAV file: 'fmt ' chunk too short ({len(fmt_data)} bytes) in {path.name}"
+                        )
+
+                    (
+                        format_tag,
+                        channels,
+                        sample_rate,
+                        avg_bytes_sec,
+                        block_align,
+                        bits_per_sample,
+                    ) = struct.unpack("<HHIIHH", fmt_data[:16])
+
+                    if channels not in SUPPORTED_CHANNELS:
+                        raise UnsupportedAudioFormatError(
+                            f"Unsupported channel count: {channels}. Supported channels: {sorted(SUPPORTED_CHANNELS)} (mono/stereo)."
+                        )
+
+                    sample_width = (bits_per_sample + 7) // 8
+                    if sample_width not in SUPPORTED_SAMPLE_WIDTHS or bits_per_sample % 8 != 0:
+                        raise UnsupportedAudioFormatError(
+                            f"Unsupported bit depth: {bits_per_sample}-bit. Supported bit depths: 8, 16, 24, 32-bit."
+                        )
+
+                    expected_block_align = channels * sample_width
+                    if block_align != expected_block_align:
+                        raise InvalidWavError(
+                            f"Malformed WAV file: block alignment {block_align} does not match "
+                            f"channels ({channels}) * bytes per sample ({sample_width})."
+                        )
+
+                    if format_tag == WAVE_FORMAT_IEEE_FLOAT:
+                        raise UnsupportedAudioFormatError(
+                            "Unsupported WAV audio format: IEEE float (0x0003). Only uncompressed integer PCM is supported."
+                        )
+
+                    elif format_tag == WAVE_FORMAT_EXTENSIBLE:
+                        if len(fmt_data) < 40:
+                            raise InvalidWavError(
+                                f"Malformed WAVE_FORMAT_EXTENSIBLE chunk: length is {len(fmt_data)} bytes (expected >= 40)."
+                            )
+                        cb_size, valid_bits, channel_mask = struct.unpack("<HHI", fmt_data[16:24])
+                        subformat_guid = fmt_data[24:40]
+
+                        if cb_size < 22:
+                            raise InvalidWavError(
+                                f"Malformed WAVE_FORMAT_EXTENSIBLE chunk: cbSize is {cb_size} (expected >= 22)."
+                            )
+
+                        if subformat_guid == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT:
+                            raise UnsupportedAudioFormatError(
+                                "Unsupported WAV audio format: IEEE float (WAVE_FORMAT_EXTENSIBLE). Only uncompressed integer PCM is supported."
+                            )
+
+                        if subformat_guid != KSDATAFORMAT_SUBTYPE_PCM:
+                            raise UnsupportedAudioFormatError(
+                                f"Unsupported WAV extensible subformat GUID: {subformat_guid.hex()}. "
+                                f"Only uncompressed integer PCM is supported."
+                            )
+
+                        if valid_bits != 0 and valid_bits != bits_per_sample:
+                            raise UnsupportedAudioFormatError(
+                                f"Unsupported partial bit-depth: {valid_bits} valid bits in {bits_per_sample}-bit container. "
+                                f"Only full-container integer PCM is supported."
+                            )
+
+                    elif format_tag != WAVE_FORMAT_PCM:
+                        raise UnsupportedAudioFormatError(
+                            f"Unsupported WAV audio format tag 0x{format_tag:04X}. Only uncompressed integer PCM is supported."
+                        )
+                else:
+                    f.seek(chunk_size, 1)
+                    offset += chunk_size
+
+                # Word-align chunk padding (chunks in RIFF are padded to even boundary)
+                if chunk_size % 2 != 0:
+                    f.read(1)
+                    offset += 1
+
+            if not fmt_found:
+                raise InvalidWavError(f"Malformed WAV file: missing 'fmt ' chunk in {path.name}")
+
+    except (struct.error, EOFError) as exc:
+        raise InvalidWavError(f"Malformed or truncated WAV file: {exc}") from exc
+    except OSError as exc:
+        raise AudioReadError(f"Cannot read audio file: {path}") from exc
+
+
 def validate_wav(file_path: str | Path) -> WavData:
     """
     Validate that an audio file is a readable, uncompressed PCM WAV file
@@ -155,17 +308,10 @@ def validate_wav(file_path: str | Path) -> WavData:
     if file_size == 0:
         raise InvalidWavError(f"Audio file is empty (0 bytes): {path.name}")
 
-    # Preliminary RIFF header sanity check (first 12 bytes: RIFF....WAVE)
-    try:
-        with path.open("rb") as f:
-            header = f.read(12)
-    except OSError as exc:
-        raise AudioReadError(f"Cannot read audio file: {path}") from exc
+    # 3. Low-level RIFF/WAVE format inspection & structural validation
+    _verify_riff_wave_format(path)
 
-    if len(header) < 12 or not header.startswith(b"RIFF") or header[8:12] != b"WAVE":
-        raise InvalidWavError(f"File is not a valid RIFF/WAVE audio file: {path.name}")
-
-    # Open with wave module
+    # 4. Open with wave module
     try:
         with wave.open(str(path), "rb") as wav_file:
             channels = wav_file.getnchannels()
@@ -181,6 +327,8 @@ def validate_wav(file_path: str | Path) -> WavData:
             raise UnsupportedAudioFormatError(
                 f"Unsupported WAV audio format ({exc}): {path.name}. Only uncompressed integer PCM is supported."
             ) from exc
+        raise InvalidWavError(f"Malformed or corrupted WAV file: {exc}") from exc
+    except (EOFError, struct.error) as exc:
         raise InvalidWavError(f"Malformed or corrupted WAV file: {exc}") from exc
     except OSError as exc:
         raise AudioReadError(f"Error reading WAV file: {exc}") from exc

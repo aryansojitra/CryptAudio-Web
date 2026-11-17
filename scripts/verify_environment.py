@@ -76,7 +76,7 @@ try_import("numpy", "NumPy")
 try_import("matplotlib", "Matplotlib")
 try_import("pytest", "pytest")
 try_import("httpx", "HTTPX")
-try_import("multipart", "python-multipart")
+try_import("python_multipart", "python-multipart")
 
 # Standard library
 try_import("wave", "wave (stdlib)")
@@ -99,10 +99,10 @@ required_dirs = [
     "app/steganography",
     "app/services",
     "app/evaluation",
-    "app/static",
-    "app/static/css",
-    "app/static/js",
-    "app/static/assets",
+    "frontend",
+    "frontend/css",
+    "frontend/js",
+    "frontend/assets",
     "tests",
     "scripts",
     "temporary",
@@ -121,7 +121,7 @@ required_files = [
     "app/steganography/__init__.py",
     "app/services/__init__.py",
     "app/evaluation/__init__.py",
-    "app/static/index.html",
+    "frontend/index.html",
     "temporary/.gitkeep",
 ]
 
