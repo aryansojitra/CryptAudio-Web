@@ -81,10 +81,10 @@ def test_index_html_loads_api_module(client: TestClient) -> None:
     assert 'id="btn-inspect-submit"' in html
     assert 'id="btn-analyze-submit"' in html
 
-    # Verify backend status indicator
-    assert 'id="backend-status-pill"' in html
-    assert 'id="backend-status-dot"' in html
-    assert 'id="backend-status-text"' in html
+    # Verify backend status indicator on dashboard
+    assert 'id="dash-backend-status"' in html
+    assert 'id="dash-backend-dot"' in html
+    assert 'id="dash-backend-text"' in html
 
 
 def test_api_js_serves_valid_client(client: TestClient) -> None:

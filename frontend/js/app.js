@@ -217,7 +217,7 @@
     } catch (err) {
       if (statusDot) statusDot.className = 'status-dot disconnected';
       if (statusText) statusText.textContent = 'Backend: Disconnected (Retry)';
-      if (statusPill) statusPill.title = 'Cannot reach backend at 127.0.0.1:8000. Click to retry.';
+      if (statusPill) statusPill.title = 'Cannot reach backend server. Click to retry.';
       if (dashDot) dashDot.className = 'status-dot disconnected';
       if (dashText) dashText.textContent = 'Disconnected';
     }

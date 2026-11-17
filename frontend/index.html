@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CryptAudio Web — Cryptographic Audio Steganography</title>
-    <meta name="description" content="Local academic suite for AES-256-GCM encrypted LSB audio steganography and numerical quality evaluation.">
+    <meta name="description" content="CryptAudio — Web application for AES-256-GCM encrypted LSB audio steganography and numerical quality evaluation.">
 
     <!-- Theme initialization script executed synchronously in <head> to prevent FOUC without inline JS -->
     <script src="/static/js/theme.js"></script>
@@ -34,19 +34,12 @@
                         </svg>
                     </div>
                     <div class="brand-title">
-                        CryptAudio Web <span>Dashboard</span>
-                        <span class="badge-academic">Academic Suite</span>
+                        CryptAudio
                     </div>
                 </a>
             </div>
 
             <div class="header-right">
-                <!-- Real Backend Connection Indicator with Refresh -->
-                <div id="backend-status-pill" class="status-indicator" title="Click to refresh connection status" role="status" style="cursor: pointer;">
-                    <span id="backend-status-dot" class="status-dot checking"></span>
-                    <span id="backend-status-text">Backend: Connecting...</span>
-                </div>
-
                 <!-- Theme Toggle Button -->
                 <button id="theme-toggle-btn" class="btn-icon" aria-label="Switch to Dark Theme" title="Toggle Light/Dark Theme">
                     <!-- Sun Icon (shown in dark theme to switch to light) -->
@@ -152,14 +145,6 @@
         <!-- Main Workspace Area -->
         <main class="app-main">
             <div class="content-wrapper">
-
-                <!-- Backend Connection Banner -->
-                <div class="demo-banner">
-                    <div class="demo-banner-content">
-                        <span class="demo-badge" style="background-color: var(--color-success); color: #FFFFFF;">Local API</span>
-                        <span>Full FastAPI backend integration active at <code style="font-weight: 600;">127.0.0.1:8000</code>. Audio files and cryptographic secrets remain strictly local.</span>
-                    </div>
-                </div>
 
                 <!-- ==========================================================
                      VIEW 1: DASHBOARD

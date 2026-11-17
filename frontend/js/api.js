@@ -63,7 +63,7 @@
         return await response.json();
       } catch (err) {
         if (err instanceof APIError) throw err;
-        throw new APIError('NETWORK_ERROR', 'Unable to reach backend server at 127.0.0.1:8000.', 0);
+        throw new APIError('NETWORK_ERROR', 'Unable to reach backend server.', 0);
       }
     },
 
