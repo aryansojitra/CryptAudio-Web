@@ -1,0 +1,151 @@
+/* ==========================================================================
+   CryptAudio Web — CSS Custom Properties & Design Tokens
+   Phase 9: Frontend Design (Light Primary + Dark Theme)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Light Theme — Primary / Default
+   -------------------------------------------------------------------------- */
+:root,
+[data-theme="light"] {
+  /* Surface & Page Backgrounds */
+  --bg-page: #F6F7F9;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+  --bg-subtle: #F0F2F5;
+  --border-color: #D9DEE5;
+  --border-subtle: #E8ECF1;
+
+  /* Typography */
+  --text-primary: #1A1F27;
+  --text-secondary: #556070;
+  --text-muted: #768292;
+  --text-placeholder: #8C98A8;
+
+  /* Accent & Interactive (Contrast verified: dark text #14100A provides >5:1 contrast) */
+  --color-accent: #B7791F;
+  --color-accent-hover: #9C6518;
+  --color-accent-pressed: #825412;
+  --text-on-accent: #14100A;
+
+  /* Feedback & Links */
+  --color-link: #1F5FBF;
+  --color-link-hover: #164894;
+  --color-success: #2E7D32;
+  --color-success-bg: #EDF7ED;
+  --color-success-border: #C8E6C9;
+  --color-error: #D32F2F;
+  --color-error-bg: #FDEDED;
+  --color-error-border: #FFCDD2;
+  --color-warning: #ED6C02;
+  --color-warning-bg: #FFF4E5;
+  --color-warning-border: #FFE0B2;
+  --color-info-bg: #E8F1FC;
+  --color-info-border: #BFD7F8;
+
+  /* Forms & Controls */
+  --bg-input: #FFFFFF;
+  --bg-input-hover: #FBFBFD;
+  --focus-ring: rgba(183, 121, 31, 0.35);
+  --bg-disabled: #E9ECEF;
+  --text-disabled: #8E9BAE;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.10);
+
+  /* Scrollbar */
+  --scrollbar-thumb: #CBD5E1;
+  --scrollbar-track: #F1F5F9;
+
+  /* Glass/Overlay */
+  --overlay-bg: rgba(15, 23, 42, 0.4);
+}
+
+/* --------------------------------------------------------------------------
+   Dark Theme — Optional Toggle
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] {
+  /* Surface & Page Backgrounds */
+  --bg-page: #0E1116;
+  --bg-surface: #151A21;
+  --bg-elevated: #1C222B;
+  --bg-subtle: #19202A;
+  --border-color: #2A323D;
+  --border-subtle: #212933;
+
+  /* Typography */
+  --text-primary: #E6EAF0;
+  --text-secondary: #9AA4B2;
+  --text-muted: #6B7685;
+  --text-placeholder: #525C6A;
+
+  /* Accent & Interactive */
+  --color-accent: #E8A33D;
+  --color-accent-hover: #F0B65C;
+  --color-accent-pressed: #C98820;
+  --text-on-accent: #14100A;
+
+  /* Feedback & Links */
+  --color-link: #5B8DEF;
+  --color-link-hover: #7CA5F5;
+  --color-success: #4CAF7A;
+  --color-success-bg: rgba(76, 175, 122, 0.12);
+  --color-success-border: rgba(76, 175, 122, 0.3);
+  --color-error: #E5484D;
+  --color-error-bg: rgba(229, 72, 77, 0.12);
+  --color-error-border: rgba(229, 72, 77, 0.3);
+  --color-warning: #F5A623;
+  --color-warning-bg: rgba(245, 166, 35, 0.12);
+  --color-warning-border: rgba(245, 166, 35, 0.3);
+  --color-info-bg: rgba(91, 141, 239, 0.12);
+  --color-info-border: rgba(91, 141, 239, 0.3);
+
+  /* Forms & Controls */
+  --bg-input: #12161D;
+  --bg-input-hover: #161C24;
+  --focus-ring: rgba(232, 163, 61, 0.4);
+  --bg-disabled: #1E252F;
+  --text-disabled: #525C6A;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.7);
+
+  /* Scrollbar */
+  --scrollbar-thumb: #333F4F;
+  --scrollbar-track: #0E1116;
+
+  /* Glass/Overlay */
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+}
+
+/* --------------------------------------------------------------------------
+   Shared Design Tokens (Constants across both themes)
+   -------------------------------------------------------------------------- */
+:root {
+  /* Fonts */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Sizing & Layout */
+  --sidebar-width: 260px;
+  --header-height: 64px;
+  --max-content-width: 1200px;
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+}

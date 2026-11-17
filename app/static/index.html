@@ -1,11 +1,834 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CryptAudio Web</title>
+    <title>CryptAudio Web — Cryptographic Audio Steganography</title>
+    <meta name="description" content="Local academic suite for AES-256-GCM encrypted LSB audio steganography and numerical quality evaluation.">
+
+    <!-- Pre-render theme initialization to prevent flash of wrong theme (FOUC) -->
+    <script>
+        (function() {
+            try {
+                var saved = localStorage.getItem('cryptaudio_theme');
+                if (saved === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+
+    <!-- Design Tokens & Master Stylesheet -->
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-    <!-- Phase 1: Project Setup — Frontend implementation pending Phase 2 -->
+    <div class="app-container">
+        <!-- Top Application Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <button id="btn-mobile-nav" class="btn-icon btn-mobile-nav" aria-label="Open navigation menu">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <a href="#dashboard" class="brand" data-target-view="#dashboard">
+                    <div class="brand-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="22"></line>
+                        </svg>
+                    </div>
+                    <div class="brand-title">
+                        CryptAudio Web <span>Dashboard</span>
+                        <span class="badge-academic">Academic Suite</span>
+                    </div>
+                </a>
+            </div>
+
+            <div class="header-right">
+                <div class="status-indicator" title="FastAPI backend operational">
+                    <span class="status-dot"></span>
+                    <span>Backend: Online</span>
+                </div>
+
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle-btn" class="btn-icon" aria-label="Switch to Dark Theme" title="Toggle Light/Dark Theme">
+                    <!-- Sun Icon (shown in dark theme to switch to light) -->
+                    <svg id="icon-theme-sun" style="display: none;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <!-- Moon Icon (shown in light theme to switch to dark) -->
+                    <svg id="icon-theme-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Mobile Drawer Backdrop -->
+        <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+        <!-- Sidebar Navigation -->
+        <aside id="app-sidebar" class="app-sidebar">
+            <div class="sidebar-top">
+                <div class="nav-section-title">Operations</div>
+                <nav>
+                    <ul class="nav-list">
+                        <li>
+                            <a href="#dashboard" class="nav-link active">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <rect x="3" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="14" width="7" height="7"></rect>
+                                    <rect x="3" y="14" width="7" height="7"></rect>
+                                </svg>
+                                <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#embed" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                </svg>
+                                <span>Embed Message</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#extract" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                <span>Extract Message</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#inspect" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                                <span>Audio Inspector</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#analyze" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                                </svg>
+                                <span>Quality Analysis</span>
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="nav-section-title" style="margin-top: 1.5rem;">Documentation</div>
+                    <ul class="nav-list">
+                        <li>
+                            <a href="#about" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                                <span>About CryptAudio</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="sidebar-footer">
+                <p>CryptAudio Web v1.0.0</p>
+                <p>AES-256-GCM + LSB Stego</p>
+                <p>Academic Project — NFSU</p>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="app-main">
+            <div class="content-wrapper">
+
+                <!-- Phase 9 Demonstration Mode Banner -->
+                <div class="demo-banner">
+                    <div class="demo-banner-content">
+                        <span class="demo-badge">Phase 9 Demo</span>
+                        <span>Frontend UI is active in client-side demonstration mode. Full backend REST API integration will connect in Phase 10.</span>
+                    </div>
+                </div>
+
+                <!-- ==========================================================
+                     VIEW 1: DASHBOARD
+                     ========================================================== -->
+                <section id="view-dashboard" class="view-section active">
+                    <div class="view-header">
+                        <h1 class="view-title">Cryptographic Audio Steganography Suite</h1>
+                        <p class="view-subtitle">
+                            Securely conceal encrypted confidential data within uncompressed PCM WAV audio using sample-level Least Significant Bit (LSB) embedding and authenticated AES-256-GCM encryption.
+                        </p>
+                    </div>
+
+                    <!-- Core Feature Navigation Cards -->
+                    <div class="grid-2">
+                        <div class="feature-card">
+                            <div>
+                                <div class="feature-icon">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                    </svg>
+                                </div>
+                                <h2 class="feature-title">Embed Secret Message</h2>
+                                <p class="feature-text">
+                                    Encrypt plaintext using AES-256-GCM with key derived from PBKDF2-HMAC-SHA256 (600,000 rounds) and hide the ciphertext into the LSBs of a PCM WAV carrier.
+                                </p>
+                            </div>
+                            <button class="btn btn-primary btn-sm" data-target-view="#embed">Go to Embed &rarr;</button>
+                        </div>
+
+                        <div class="feature-card">
+                            <div>
+                                <div class="feature-icon">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                                <h2 class="feature-title">Extract Secret Message</h2>
+                                <p class="feature-text">
+                                    Scan a stego WAV audio file for the 13-byte stego framing header, extract embedded ciphertext bits, verify CRC32 integrity, and decrypt with your passphrase.
+                                </p>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" data-target-view="#extract">Go to Extract &rarr;</button>
+                        </div>
+
+                        <div class="feature-card">
+                            <div>
+                                <div class="feature-icon">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    </svg>
+                                </div>
+                                <h2 class="feature-title">Audio File Inspector</h2>
+                                <p class="feature-text">
+                                    Inspect carrier WAV technical properties: duration, sample rate (e.g. 44.1 kHz, 48 kHz), bit depth (8/16/24/32-bit), channels, and calculate exact LSB capacity.
+                                </p>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" data-target-view="#inspect">Inspect Audio &rarr;</button>
+                        </div>
+
+                        <div class="feature-card">
+                            <div>
+                                <div class="feature-icon">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                                    </svg>
+                                </div>
+                                <h2 class="feature-title">Quality Analysis (MSE / PSNR)</h2>
+                                <p class="feature-text">
+                                    Quantify perceptual and numerical distortion between carrier and stego audio files using Mean Squared Error, SNR, PSNR (dB), and Pearson Correlation.
+                                </p>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" data-target-view="#analyze">Analyze Audio &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- Workflow Sequence -->
+                    <div class="card" style="margin-top: 1.5rem;">
+                        <div class="card-header">
+                            <div>
+                                <h3 class="card-title">Steganographic Workflow Architecture</h3>
+                                <p class="card-subtitle">End-to-end cryptographic and signal processing sequence</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-steps">
+                            <div class="workflow-step">
+                                <div class="step-number">1</div>
+                                <h4 class="step-title">Carrier Audio Selection</h4>
+                                <p class="step-desc">Select an uncompressed 8, 16, 24, or 32-bit PCM WAV audio file to serve as the innocent carrier.</p>
+                            </div>
+
+                            <div class="workflow-step">
+                                <div class="step-number">2</div>
+                                <h4 class="step-title">Key Derivation & AES-GCM</h4>
+                                <p class="step-desc">PBKDF2-HMAC-SHA256 derives a 256-bit key using a fresh 16-byte salt and 600,000 iterations to encrypt with AES-GCM.</p>
+                            </div>
+
+                            <div class="workflow-step">
+                                <div class="step-number">3</div>
+                                <h4 class="step-title">Sample-Level LSB Framing</h4>
+                                <p class="step-desc">A 13-byte header with magic marker, CRC32, and payload size is prefixed and embedded bit-by-bit into sample LSBs.</p>
+                            </div>
+
+                            <div class="workflow-step">
+                                <div class="step-number">4</div>
+                                <h4 class="step-title">Extraction & Verification</h4>
+                                <p class="step-desc">The receiver extracts LSB bits, validates the CRC32 checksum, and verifies the 16-byte GCM tag to ensure no tampering.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==========================================================
+                     VIEW 2: EMBED MESSAGE
+                     ========================================================== -->
+                <section id="view-embed" class="view-section">
+                    <div class="view-header">
+                        <h1 class="view-title">Embed Secret Message</h1>
+                        <p class="view-subtitle">Encrypt confidentiality-critical text and embed it into sample LSBs of an uncompressed WAV carrier.</p>
+                    </div>
+
+                    <div class="card">
+                        <form id="form-embed" onsubmit="return false;">
+                            <!-- Dropzone for Carrier WAV -->
+                            <div class="form-group">
+                                <label class="form-label">1. Carrier WAV Audio File</label>
+                                <div class="dropzone" data-preview="embed-file-preview">
+                                    <input type="file" id="embed-file-input" accept=".wav,audio/wav,audio/x-wav">
+                                    <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <div class="dropzone-text">Drop carrier WAV file here, or click to browse</div>
+                                    <div class="dropzone-hint">Supported: Uncompressed PCM WAV (8-bit, 16-bit, 24-bit, 32-bit integer PCM). Max 50 MB.</div>
+                                </div>
+                                <div id="embed-file-preview" class="file-preview" style="display: none;">
+                                    <div class="file-preview-info">
+                                        <svg class="file-preview-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                        </svg>
+                                        <div>
+                                            <div class="file-preview-name">carrier_audio.wav</div>
+                                            <div class="file-preview-size">1.25 MB (16-bit, 44.1 kHz, Stereo)</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge-academic">Ready</span>
+                                </div>
+                            </div>
+
+                            <!-- Secret Message Textarea -->
+                            <div class="form-group">
+                                <label class="form-label" for="embed-message-input">2. Secret Plaintext Message</label>
+                                <textarea id="embed-message-input" class="form-textarea" placeholder="Enter your confidential message here (UTF-8 supported: English, Hindi, Gujarati, emojis)..."></textarea>
+                                <div class="form-helper">
+                                    <span>Supports full UTF-8 Unicode characters</span>
+                                    <span><span id="embed-char-counter">0 chars</span> | <span id="embed-byte-counter">0 bytes</span></span>
+                                </div>
+                            </div>
+
+                            <!-- Encryption Passphrase -->
+                            <div class="form-group">
+                                <label class="form-label" for="embed-password-input">3. Secret Passphrase</label>
+                                <div class="input-group-password">
+                                    <input type="password" id="embed-password-input" class="form-input" placeholder="Enter strong secret passphrase (used for PBKDF2 key derivation)...">
+                                    <button type="button" class="btn-toggle-password" data-target="embed-password-input" aria-label="Show password" title="Toggle password visibility">
+                                        <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                        <svg class="icon-eye-off" style="display: none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="form-helper">
+                                    <span>Derived with PBKDF2-HMAC-SHA256 &bull; 600,000 rounds &bull; 16-byte fresh salt</span>
+                                </div>
+                            </div>
+
+                            <!-- Theoretical Capacity Meter (Demonstration) -->
+                            <div class="capacity-container">
+                                <div class="capacity-header">
+                                    <span class="capacity-title">Estimated LSB Capacity Utilization (Demo)</span>
+                                    <span id="embed-capacity-percent" class="capacity-metric">0.00% utilized (est. 0 / 55,125 B)</span>
+                                </div>
+                                <div class="progress-bar-bg">
+                                    <div id="embed-capacity-fill" class="progress-bar-fill safe" style="width: 1%;"></div>
+                                </div>
+                            </div>
+
+                            <div class="action-bar">
+                                <button type="button" id="btn-simulate-embed" class="btn btn-primary">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                    </svg>
+                                    Simulate Embed (Demo)
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-reset-form="form-embed">Reset</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Simulated Result Card -->
+                    <div id="embed-result-card" class="card result-card success" style="display: none;">
+                        <div class="card-header">
+                            <div>
+                                <h3 class="card-title">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-success);">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                    </svg>
+                                    Embedding Simulation Complete (Demo)
+                                </h3>
+                                <p class="card-subtitle">Secret message encrypted with AES-256-GCM and framed in LSBs</p>
+                            </div>
+                        </div>
+                        <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                            The payload was encapsulated into an authenticated GCM envelope (16-byte salt, 12-byte nonce, 16-byte tag) and framed with a 13-byte stego header into carrier audio sample LSBs.
+                        </p>
+                        <div class="grid-3" style="margin-bottom: 1.25rem;">
+                            <div class="stat-card">
+                                <div class="stat-label">Payload Size</div>
+                                <div class="stat-value">128 B</div>
+                                <div class="stat-desc">Plaintext message</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Framed Size</div>
+                                <div class="stat-value">174 B</div>
+                                <div class="stat-desc">Ciphertext + Headers</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">LSB Utilization</div>
+                                <div class="stat-value">0.31%</div>
+                                <div class="stat-desc">Negligible signal distortion</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="window.showToast('Demo download placeholder: Real audio download activates in Phase 10 integration.', 'info');">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Download Stego WAV (Demo Placeholder)
+                        </button>
+                    </div>
+                </section>
+
+                <!-- ==========================================================
+                     VIEW 3: EXTRACT MESSAGE
+                     ========================================================== -->
+                <section id="view-extract" class="view-section">
+                    <div class="view-header">
+                        <h1 class="view-title">Extract Secret Message</h1>
+                        <p class="view-subtitle">Recover and decrypt hidden text from a stego WAV audio file using the authorized passphrase.</p>
+                    </div>
+
+                    <div class="card">
+                        <form id="form-extract" onsubmit="return false;">
+                            <div class="form-group">
+                                <label class="form-label">1. Stego WAV Audio File</label>
+                                <div class="dropzone" data-preview="extract-file-preview">
+                                    <input type="file" id="extract-file-input" accept=".wav,audio/wav,audio/x-wav">
+                                    <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    <div class="dropzone-text">Drop stego WAV file here, or click to browse</div>
+                                    <div class="dropzone-hint">Must contain an embedded CSLB steganography header. Max 50 MB.</div>
+                                </div>
+                                <div id="extract-file-preview" class="file-preview" style="display: none;">
+                                    <div class="file-preview-info">
+                                        <svg class="file-preview-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                        </svg>
+                                        <div>
+                                            <div class="file-preview-name">carrier_stego.wav</div>
+                                            <div class="file-preview-size">1.25 MB (LSB Embedded)</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge-academic">Stego Carrier</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="extract-password-input">2. Secret Passphrase</label>
+                                <div class="input-group-password">
+                                    <input type="password" id="extract-password-input" class="form-input" placeholder="Enter passphrase used during embedding...">
+                                    <button type="button" class="btn-toggle-password" data-target="extract-password-input" aria-label="Show password">
+                                        <svg class="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                        <svg class="icon-eye-off" style="display: none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="action-bar">
+                                <button type="button" id="btn-simulate-extract" class="btn btn-primary">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    Simulate Extract (Demo)
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-reset-form="form-extract">Reset</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Simulated Recovered Message Card -->
+                    <div id="extract-result-card" class="card result-card success" style="display: none;">
+                        <div class="card-header">
+                            <div>
+                                <h3 class="card-title">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-success);">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    Decrypted Plaintext Message (Demo Simulation)
+                                </h3>
+                                <p class="card-subtitle">CRC32 valid &bull; AES-256-GCM authentication tag verified</p>
+                            </div>
+                            <span class="badge-academic" style="background-color: var(--color-success-bg); color: var(--color-success); border-color: var(--color-success-border);">Verified</span>
+                        </div>
+
+                        <div id="recovered-message-text" class="payload-display">CLASSIFIED MISSION BRIEFING [SAMPLE DEMO]:
+Operation CryptAudio has verified secure signal transmission over uncompressed carrier channel.
+Rendezvous coordinates: 23.0225° N, 72.5714° E (Ahmedabad, India).
+All cryptographic parameters verified intact under PBKDF2-HMAC-SHA256 derivation.</div>
+
+                        <div class="copy-toolbar">
+                            <button class="btn btn-secondary btn-sm" data-copy-target="recovered-message-text">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                Copy Message to Clipboard
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==========================================================
+                     VIEW 4: AUDIO INSPECTOR
+                     ========================================================== -->
+                <section id="view-inspect" class="view-section">
+                    <div class="view-header">
+                        <h1 class="view-title">Audio File Inspector</h1>
+                        <p class="view-subtitle">Inspect technical header metadata, sample structure, and theoretical LSB capacity of uncompressed WAV files.</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="form-group">
+                            <label class="form-label">Upload WAV File to Inspect</label>
+                            <div class="dropzone" data-preview="inspect-file-preview">
+                                <input type="file" id="inspect-file-input" accept=".wav,audio/wav,audio/x-wav">
+                                <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                                <div class="dropzone-text">Drop WAV file to inspect, or click to browse</div>
+                                <div class="dropzone-hint">Reads RIFF WAVE header, fmt chunk, and data chunk without modifying audio.</div>
+                            </div>
+                            <div id="inspect-file-preview" class="file-preview" style="display: none;">
+                                <div class="file-preview-info">
+                                    <svg class="file-preview-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                    </svg>
+                                    <div>
+                                        <div class="file-preview-name">sample_track.wav</div>
+                                        <div class="file-preview-size">1.76 MB (PCM Audio)</div>
+                                    </div>
+                                </div>
+                                <span class="badge-academic">Carrier</span>
+                            </div>
+                        </div>
+
+                        <div class="action-bar">
+                            <button type="button" id="btn-simulate-inspect" class="btn btn-primary">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                                Simulate Inspection (Demo)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Inspection Results Grid (Demonstration) -->
+                    <div id="inspect-results-grid" class="grid-4" style="display: none;">
+                        <div class="stat-card">
+                            <div class="stat-label">Audio Format</div>
+                            <div class="stat-value" style="font-size: 1.15rem;">PCM (WAVE)</div>
+                            <div class="stat-desc">WAVE_FORMAT_PCM (0x0001)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Sample Rate</div>
+                            <div class="stat-value">44,100 Hz</div>
+                            <div class="stat-desc">Standard Audio CD Fidelity</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Channels</div>
+                            <div class="stat-value">2 (Stereo)</div>
+                            <div class="stat-desc">Left / Right interleaved</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Bit Depth</div>
+                            <div class="stat-value">16-bit</div>
+                            <div class="stat-desc">2 bytes per sample per channel</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Duration</div>
+                            <div class="stat-value">10.50 s</div>
+                            <div class="stat-desc">463,050 audio frames</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Samples</div>
+                            <div class="stat-value">926,100</div>
+                            <div class="stat-desc">Frames &times; Channels</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Raw LSB Capacity</div>
+                            <div class="stat-value">115.76 KB</div>
+                            <div class="stat-desc">926,100 bits theoretical</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Usable Payload</div>
+                            <div class="stat-value">115.71 KB</div>
+                            <div class="stat-desc">Excluding 46 B protocol headers</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==========================================================
+                     VIEW 5: QUALITY ANALYSIS
+                     ========================================================== -->
+                <section id="view-analyze" class="view-section">
+                    <div class="view-header">
+                        <h1 class="view-title">Numerical Audio Quality Analysis</h1>
+                        <p class="view-subtitle">Quantify distortion between original carrier and stego audio files via NumPy-powered signal quality metrics.</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">1. Original Carrier Audio</label>
+                                <div class="dropzone" data-preview="orig-preview">
+                                    <input type="file" id="analyze-orig-input" accept=".wav,audio/wav">
+                                    <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                    </svg>
+                                    <div class="dropzone-text">Original WAV</div>
+                                    <div class="dropzone-hint">Carrier audio before embedding</div>
+                                </div>
+                                <div id="orig-preview" class="file-preview" style="display: none;">
+                                    <div class="file-preview-info">
+                                        <div>
+                                            <div class="file-preview-name">original_carrier.wav</div>
+                                            <div class="file-preview-size">1.25 MB</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">2. Stego WAV Audio</label>
+                                <div class="dropzone" data-preview="stego-preview">
+                                    <input type="file" id="analyze-stego-input" accept=".wav,audio/wav">
+                                    <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    <div class="dropzone-text">Stego WAV</div>
+                                    <div class="dropzone-hint">Audio with embedded payload</div>
+                                </div>
+                                <div id="stego-preview" class="file-preview" style="display: none;">
+                                    <div class="file-preview-info">
+                                        <div>
+                                            <div class="file-preview-name">stego_output.wav</div>
+                                            <div class="file-preview-size">1.25 MB</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="action-bar">
+                            <button type="button" id="btn-simulate-analyze" class="btn btn-primary">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                                </svg>
+                                Simulate Analysis (Demo)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quality Analysis Result Cards (Demonstration) -->
+                    <div id="analyze-results-card" class="card" style="display: none;">
+                        <div class="card-header">
+                            <div>
+                                <h3 class="card-title">Steganographic Distortion Assessment (Demo)</h3>
+                                <p class="card-subtitle">Calculated using NumPy vectorized floating-point evaluation</p>
+                            </div>
+                            <span class="badge-quality excellent">&check; Excellent Fidelity</span>
+                        </div>
+
+                        <div class="grid-4" style="margin-bottom: 1.5rem;">
+                            <div class="stat-card">
+                                <div class="stat-label">Mean Squared Error (MSE)</div>
+                                <div class="stat-value">0.000031</div>
+                                <div class="stat-desc">Near-zero signal deviation</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Signal-to-Noise (SNR)</div>
+                                <div class="stat-value">91.42 dB</div>
+                                <div class="stat-desc">Dominant carrier signal</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Peak SNR (PSNR)</div>
+                                <div class="stat-value">96.88 dB</div>
+                                <div class="stat-desc">> 50 dB indicates transparent</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Pearson Correlation (r)</div>
+                                <div class="stat-value">0.999999</div>
+                                <div class="stat-desc">1.000000 = perfectly identical</div>
+                            </div>
+                        </div>
+
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Observed Value</th>
+                                    <th>Benchmark Standard</th>
+                                    <th>Interpretation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>PSNR</td>
+                                    <td>96.88 dB</td>
+                                    <td>&gt; 40 dB (Acceptable), &gt; 50 dB (Imperceptible)</td>
+                                    <td>Imperceptible to human auditory system</td>
+                                </tr>
+                                <tr>
+                                    <td>SNR</td>
+                                    <td>91.42 dB</td>
+                                    <td>&gt; 35 dB (High Quality)</td>
+                                    <td>LSB modification acts as sub-audible white noise</td>
+                                </tr>
+                                <tr>
+                                    <td>MSE</td>
+                                    <td>3.1 &times; 10<sup>-5</sup></td>
+                                    <td>Approaching 0.0</td>
+                                    <td>Negligible energy difference between waveforms</td>
+                                </tr>
+                                <tr>
+                                    <td>Pearson Correlation (r)</td>
+                                    <td>0.999999</td>
+                                    <td>&gt; 0.990000</td>
+                                    <td>Near-perfect waveform alignment</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- ==========================================================
+                     VIEW 6: ABOUT CRYPTAUDIO
+                     ========================================================== -->
+                <section id="view-about" class="view-section">
+                    <div class="view-header">
+                        <h1 class="view-title">About CryptAudio Architecture</h1>
+                        <p class="view-subtitle">Academic foundations, cryptographic threat modeling, and steganographic limitations.</p>
+                    </div>
+
+                    <div class="card doc-article">
+                        <div class="doc-section">
+                            <h2 class="doc-h2">1. What is Audio Steganography?</h2>
+                            <p class="doc-p">
+                                Steganography is the science of concealing the existence of communication. Unlike traditional cryptography which protects message secrecy but leaves ciphertext openly visible, steganography embeds confidential information into an innocent cover media (such as audio, image, or video) so that casual observers cannot detect that secret communication is occurring.
+                            </p>
+                            <p class="doc-p">
+                                <strong>CryptAudio Web</strong> combines both paradigms: the message is first encrypted using authenticated cryptography so that even if the stego carrier is intercepted, the adversary cannot decipher the contents without the secret key.
+                            </p>
+                        </div>
+
+                        <div class="doc-section">
+                            <h2 class="doc-h2">2. Cryptographic Security Engine</h2>
+                            <p class="doc-p">
+                                CryptAudio Web uses <strong>AES-256-GCM</strong> (Galois/Counter Mode), an authenticated encryption with associated data (AEAD) cipher standard approved by NIST:
+                            </p>
+                            <ul style="margin-left: 1.5rem; margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.9375rem;">
+                                <li><strong>Key Derivation:</strong> Passwords are transformed into 256-bit AES keys via <code>PBKDF2-HMAC-SHA256</code> utilizing <strong>600,000 iterations</strong> and a fresh 16-byte cryptographically random salt per encryption (OWASP 2023 recommendation).</li>
+                                <li><strong>Fresh Nonce:</strong> A 12-byte cryptographically random nonce is generated for every message, preventing replay and keystream reuse attacks.</li>
+                                <li><strong>Integrity Authentication:</strong> A 128-bit (16-byte) GCM authentication tag authenticates the ciphertext and header parameters, guaranteeing message tampering detection.</li>
+                            </ul>
+                        </div>
+
+                        <div class="doc-section">
+                            <h2 class="doc-h2">3. Least Significant Bit (LSB) Embedding</h2>
+                            <p class="doc-p">
+                                Digital audio represents acoustic sound pressure levels as discrete numerical samples (e.g. 16-bit integers between -32,768 and +32,767). The Least Significant Bit (LSB) is the bit with the lowest numerical weight ($2^0 = 1$).
+                            </p>
+                            <p class="doc-p">
+                                CryptAudio substitutes the LSB of individual audio samples with consecutive bits of the encrypted payload. Modifying an individual sample's LSB alters its amplitude by at most 1 unit in a range of tens of thousands, which falls far below the human ear's perceptual threshold (Differential Limen for Intensity).
+                            </p>
+                            <p class="doc-p">
+                                The embedded data begins with a 13-byte protocol header:
+                                <code>[ 'C' 'S' 'L' 'B' ] [ 1 byte Version ] [ 4 bytes Payload Length ] [ 4 bytes CRC32 ]</code>.
+                            </p>
+                        </div>
+
+                        <div class="doc-section">
+                            <h2 class="doc-h2">4. Why Uncompressed PCM WAV?</h2>
+                            <p class="doc-p">
+                                CryptAudio strictly requires uncompressed Pulse Code Modulation (PCM) in RIFF WAVE (.wav) containers. Unlike lossy formats, linear PCM stores the exact digital sample amplitudes without psychoacoustic quantization or lossy transform coding.
+                            </p>
+                        </div>
+
+                        <div class="doc-section">
+                            <h2 class="doc-h2">5. Academic Limitations & Threat Model</h2>
+                            <div class="doc-callout warning">
+                                <div class="doc-callout-title">Important Academic Notice</div>
+                                <p>
+                                    LSB steganography is fragile by design and is <strong>not</strong> mathematically undetectable:
+                                </p>
+                                <ul style="margin-left: 1.25rem; margin-top: 0.5rem; line-height: 1.5;">
+                                    <li><strong>Lossy Recompression:</strong> Converting a stego WAV to MP3, AAC, OGG, or Opus applies psychoacoustic lossy transforms that permanently erase the embedded LSB data.</li>
+                                    <li><strong>Audio Signal Processing:</strong> Resampling, equalization, normalization, pitch-shifting, or reverb alters sample amplitudes and corrupts the hidden bits.</li>
+                                    <li><strong>Steganalysis Susceptibility:</strong> Statistical steganalysis techniques (such as Chi-squared testing, sample pair analysis, or higher-order Markov modeling) can detect artificial alterations to the natural LSB distribution in audio carriers.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <!-- Application Scripts -->
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
