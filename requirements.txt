@@ -6,3 +6,4 @@ numpy
 matplotlib
 pytest
 httpx
+PyWavelets>=1.8.0

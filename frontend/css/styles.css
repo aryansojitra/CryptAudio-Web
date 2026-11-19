@@ -1484,3 +1484,219 @@ button:disabled {
     width: 100%;
   }
 }
+
+/* ==========================================================================
+   Multi-Algorithm Steganography Components (Phase M6)
+   ========================================================================== */
+
+/* Form Select */
+.form-select {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-normal);
+  cursor: pointer;
+}
+
+.form-select:hover {
+  background-color: var(--bg-input-hover);
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* Algorithm Selector Cards Grid */
+.algo-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.algo-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 1.125rem 1rem;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-card);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+  user-select: none;
+}
+
+.algo-card:hover {
+  border-color: var(--color-accent-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.algo-card.active {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-subtle, rgba(29, 78, 216, 0.05));
+  box-shadow: 0 0 0 1px var(--color-accent), var(--shadow-sm);
+}
+
+.algo-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.algo-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.algo-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.algo-card-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.algo-card.active .algo-card-badge {
+  background-color: var(--color-accent-bg, rgba(29, 78, 216, 0.12));
+  color: var(--color-accent);
+  border-color: var(--color-accent-border, rgba(29, 78, 216, 0.3));
+}
+
+.algo-card-desc {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 0.5rem;
+  flex-grow: 1;
+}
+
+.algo-card-param-hint {
+  font-size: 0.75rem;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-muted);
+  border-top: 1px dashed var(--border-color);
+  padding-top: 0.5rem;
+}
+
+/* Parameters Panel */
+.algo-params-panel {
+  padding: 1rem 1.25rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  margin-bottom: 1.25rem;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.algo-params-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+/* Capacity Warning Banner */
+.capacity-warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-danger-bg, rgba(220, 38, 38, 0.1));
+  border: 1px solid var(--color-danger-border, rgba(220, 38, 38, 0.3));
+  color: var(--color-danger);
+  margin-top: 0.875rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.capacity-warning-banner.info-mode {
+  background-color: var(--color-accent-bg, rgba(29, 78, 216, 0.08));
+  border-color: var(--color-accent-border, rgba(29, 78, 216, 0.25));
+  color: var(--text-primary);
+}
+
+.capacity-warning-icon {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+/* Comparison Table */
+.comparison-container {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.comparison-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card);
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.comparison-table th {
+  background-color: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.comparison-table tbody tr:hover {
+  background-color: var(--bg-hover);
+}
+
+.comparison-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.comparison-prop-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+

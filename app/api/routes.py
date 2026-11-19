@@ -37,13 +37,30 @@ from app.evaluation.audio_quality import (
     compare_audio,
 )
 from app.services.cryptaudio_service import (
+    CapacityEstimate,
+    EmbedMessageResult,
+    ExtractMessageResult,
     InsufficientAudioCapacityError,
     MessageEmbeddingError,
     MessageExtractionError,
     ServiceError,
     embed_message,
+    estimate_capacity,
     extract_message,
+    extract_message_detailed,
+    inspect_stego_metadata,
 )
+from app.steganography.base import (
+    AlgorithmRegistryError,
+    AudioFormatIncompatibleError,
+    CapacityExceededError,
+    CorruptedPayloadError,
+    HeaderNotFoundError,
+    StegoAlgorithmError,
+    SynchronizationError,
+    UnsupportedParameterError,
+)
+from app.steganography.registry import get_registry
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +97,130 @@ def cleanup_files(*paths: Path | str | None) -> None:
                 Path(p).unlink(missing_ok=True)
             except OSError:
                 pass
+
+
+def validate_stego_options(
+    algorithm: str | None,
+    delta: float | None = None,
+    alpha: float | None = None,
+    allow_auto: bool = False,
+) -> tuple[str | None, dict[str, Any]]:
+    """
+    Strictly validate algorithm-specific parameters according to canonical rules.
+
+    Rules:
+    - When algorithm is None or empty:
+      - If allow_auto=False, defaults to 'lsb'.
+      - If allow_auto=True, defaults to automatic detection (None, {}).
+    - When algorithm='auto' explicitly:
+      - If allow_auto=True, returns (None, {}).
+      - If allow_auto=False, raises UnsupportedParameterError ('auto' supported only for extraction).
+    - Automatic extraction rejects any custom 'delta' or 'alpha'.
+    - DWT-DCT-QIM accepts only 'delta' in {8.0, 16.0, 32.0, 64.0}.
+    - Echo Hiding accepts only 'alpha' in [0.001, 0.50].
+    - LSB accepts only framing options (rejects 'delta' and 'alpha').
+    - Unsupported or irrelevant parameters raise UnsupportedParameterError.
+
+    Returns:
+        tuple[resolved_algorithm, options_dict]
+    """
+    clean_algo = algorithm.strip().lower() if algorithm is not None and str(algorithm).strip() else None
+
+    # Handle explicit "auto"
+    if clean_algo == "auto":
+        if not allow_auto:
+            raise UnsupportedParameterError(
+                "Automatic algorithm selection ('auto') is only supported during extraction, "
+                "not during embedding or capacity estimation. Please specify a concrete algorithm ('lsb', 'dwt_dct_qim', or 'echo')."
+            )
+        if delta is not None:
+            raise UnsupportedParameterError(
+                "Parameter 'delta' cannot be supplied during automatic algorithm detection. "
+                "Automatic detection uses each detected algorithm's default extraction parameters."
+            )
+        if alpha is not None:
+            raise UnsupportedParameterError(
+                "Parameter 'alpha' cannot be supplied during automatic algorithm detection. "
+                "Automatic detection uses each detected algorithm's default extraction parameters."
+            )
+        return None, {}
+
+    # Handle omitted / None / empty algorithm
+    if clean_algo is None:
+        if not allow_auto:
+            clean_algo = "lsb"
+        else:
+            if delta is not None:
+                raise UnsupportedParameterError(
+                    "Parameter 'delta' cannot be supplied during automatic algorithm detection. "
+                    "Automatic detection uses each detected algorithm's default extraction parameters."
+                )
+            if alpha is not None:
+                raise UnsupportedParameterError(
+                    "Parameter 'alpha' cannot be supplied during automatic algorithm detection. "
+                    "Automatic detection uses each detected algorithm's default extraction parameters."
+                )
+            return None, {}
+
+    # Explicit algorithm
+    if clean_algo == "lsb":
+        if delta is not None:
+            raise UnsupportedParameterError(
+                "Parameter 'delta' is not supported by LSB steganography."
+            )
+        if alpha is not None:
+            raise UnsupportedParameterError(
+                "Parameter 'alpha' is not supported by LSB steganography."
+            )
+        return "lsb", {}
+
+    elif clean_algo == "legacy_cslb":
+        if delta is not None:
+            raise UnsupportedParameterError(
+                "Parameter 'delta' is not supported by legacy CSLB steganography."
+            )
+        if alpha is not None:
+            raise UnsupportedParameterError(
+                "Parameter 'alpha' is not supported by legacy CSLB steganography."
+            )
+        return "legacy_cslb", {"framing": "legacy_cslb"}
+
+    elif clean_algo == "dwt_dct_qim":
+        if alpha is not None:
+            raise UnsupportedParameterError(
+                "Parameter 'alpha' is not supported by DWT-DCT-QIM steganography."
+            )
+        options = {}
+        if delta is not None:
+            if delta not in (8.0, 16.0, 32.0, 64.0):
+                raise UnsupportedParameterError(
+                    f"Unsupported QIM quantization step: {delta}. Supported steps: [8.0, 16.0, 32.0, 64.0]."
+                )
+            options["delta"] = float(delta)
+        return "dwt_dct_qim", options
+
+    elif clean_algo == "echo":
+        if delta is not None:
+            raise UnsupportedParameterError(
+                "Parameter 'delta' is not supported by Echo Hiding steganography."
+            )
+        options = {}
+        if alpha is not None:
+            if not (0.001 <= float(alpha) <= 0.50):
+                raise UnsupportedParameterError(
+                    f"Echo amplitude alpha must be in range [0.001, 0.50], got {alpha}."
+                )
+            options["alpha"] = float(alpha)
+        return "echo", options
+
+    else:
+        # Check against registry
+        reg = get_registry(include_echo=True)
+        if not reg.is_registered(clean_algo):
+            raise AlgorithmRegistryError(
+                f"Unsupported steganography algorithm '{algorithm}'."
+            )
+        return clean_algo, {}
 
 
 # ---------------------------------------------------------------------------
@@ -139,7 +280,7 @@ async def save_upload_safely(
 
 
 # ---------------------------------------------------------------------------
-# 1. Health Endpoint
+# 1. Health & Discovery Endpoints
 # ---------------------------------------------------------------------------
 
 @router.get(
@@ -159,31 +300,63 @@ async def health_check() -> JSONResponse:
     )
 
 
+@router.get(
+    "/algorithms",
+    summary="List supported steganography algorithms",
+    description="Returns metadata and capabilities for all registered audio steganography algorithms.",
+)
+async def list_algorithms() -> JSONResponse:
+    """
+    GET /api/algorithms
+    
+    Returns:
+        JSON list of available steganography algorithms (LSB, DWT-DCT-QIM, Echo Hiding).
+    """
+    reg = get_registry(include_echo=True)
+    descriptors = reg.list_available()
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "success": True,
+            "algorithms": [d.to_dict() for d in descriptors],
+        },
+    )
+
+
 # ---------------------------------------------------------------------------
-# 2. Audio Inspection Endpoint
+# 2. Audio Inspection & Capacity Endpoints
 # ---------------------------------------------------------------------------
 
 @router.post(
     "/audio/inspect",
     summary="Inspect audio WAV file",
-    description="Inspects an uploaded WAV file and returns its technical metadata and LSB capacity.",
+    description="Inspects an uploaded WAV file, returning technical audio metadata, raw capacity, and steganography signature inspection.",
 )
-async def inspect_audio(file: UploadFile = File(...)) -> JSONResponse:
+async def inspect_audio(
+    file: UploadFile = File(...),
+    algorithm: str | None = Form(None),
+) -> JSONResponse:
     """
     POST /api/audio/inspect
 
-    Accepts a multipart/form-data WAV file upload.
+    Accepts a multipart/form-data WAV file upload and optional algorithm filter.
     Returns:
         JSON with audio duration, sample rate, channels, bit depth, format,
-        and theoretical raw LSB capacity.
+        raw capacity, and steganographic inspection summary.
     """
     temp_file: Path | None = None
     try:
         temp_file = await save_upload_safely(file, prefix="inspect")
 
-        # Validate and inspect using Phase 4 modules
+        # Validate and inspect audio format
         info = inspect_wav(temp_file)
         cap = calculate_capacity(temp_file)
+
+        # Multi-algorithm steganography inspection
+        stego_inspection = inspect_stego_metadata(temp_file, algorithm=algorithm)
+
+        reg = get_registry(include_echo=True)
+        available_algorithms = [d.to_dict() for d in reg.list_available()]
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -204,6 +377,8 @@ async def inspect_audio(file: UploadFile = File(...)) -> JSONResponse:
                     "raw_capacity_bits": cap.raw_capacity_bits,
                     "raw_capacity_bytes": cap.raw_capacity_bytes,
                 },
+                "stego_inspection": stego_inspection,
+                "available_algorithms": available_algorithms,
             },
         )
     except HTTPException as exc:
@@ -219,6 +394,90 @@ async def inspect_audio(file: UploadFile = File(...)) -> JSONResponse:
         cleanup_files(temp_file)
 
 
+@router.post(
+    "/capacity",
+    summary="Estimate carrier capacity for message and algorithm",
+    description="Calculates algorithm-specific capacity for an uploaded WAV file and message.",
+)
+async def check_capacity(
+    file: UploadFile = File(...),
+    message: str = Form(""),
+    algorithm: str = Form("lsb"),
+    delta: float | None = Form(None),
+    alpha: float | None = Form(None),
+) -> JSONResponse:
+    """
+    POST /api/capacity
+
+    Accepts multipart/form-data:
+    - file: Carrier WAV file
+    - message: Target secret message string
+    - algorithm: Algorithm to evaluate ('lsb', 'dwt_dct_qim', 'echo', 'legacy_cslb')
+    - delta: Optional QIM step size (only for DWT-DCT-QIM)
+    - alpha: Optional echo amplitude (only for Echo Hiding)
+
+    Returns:
+        JSON with capacity metrics, utilization, and feasibility verdict.
+    """
+    if not message or len(message.strip()) == 0:
+        return api_error_response(
+            status.HTTP_400_BAD_REQUEST,
+            "INVALID_MESSAGE",
+            "Secret message cannot be empty.",
+        )
+
+    try:
+        clean_algo, options = validate_stego_options(algorithm, delta, alpha, allow_auto=False)
+    except UnsupportedParameterError as exc:
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "INVALID_PARAMETER", str(exc))
+    except AlgorithmRegistryError as exc:
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "UNKNOWN_ALGORITHM", str(exc))
+
+    temp_file: Path | None = None
+    try:
+        temp_file = await save_upload_safely(file, prefix="capacity")
+        est = estimate_capacity(
+            input_wav=temp_file,
+            message=message,
+            algorithm=clean_algo,
+            **options,
+        )
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "success": True,
+                "can_fit": est.can_fit,
+                "algorithm": est.algorithm_id,
+                "message_utf8_bytes": est.message_utf8_bytes,
+                "estimated_crypto_bytes": est.estimated_crypto_bytes,
+                "framed_payload_bytes": est.framed_payload_bytes,
+                "required_bits": est.required_bits,
+                "available_bits": est.available_bits,
+                "utilization_percent": est.utilization_percent,
+                "bits_per_sample": est.bits_per_sample,
+                "recommended_min_duration_sec": est.recommended_min_duration_sec,
+            },
+        )
+    except HTTPException as exc:
+        err_detail = exc.detail if isinstance(exc.detail, dict) else {"code": "BAD_REQUEST", "message": str(exc.detail)}
+        return api_error_response(exc.status_code, err_detail.get("code", "ERROR"), err_detail.get("message", "Error"))
+    except UnsupportedAudioFormatError as exc:
+        return api_error_response(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_FORMAT", str(exc))
+    except AudioFormatIncompatibleError as exc:
+        return api_error_response(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_FORMAT", str(exc))
+    except InvalidWavError as exc:
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "INVALID_WAV", str(exc))
+    except UnsupportedParameterError as exc:
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "INVALID_PARAMETER", str(exc))
+    except MessageEmbeddingError as exc:
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "CAPACITY_ERROR", str(exc))
+    except AudioError as exc:
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "AUDIO_ERROR", str(exc))
+    finally:
+        cleanup_files(temp_file)
+
+
 # ---------------------------------------------------------------------------
 # 3. Message Embedding Endpoint
 # ---------------------------------------------------------------------------
@@ -226,13 +485,16 @@ async def inspect_audio(file: UploadFile = File(...)) -> JSONResponse:
 @router.post(
     "/embed",
     summary="Encrypt and embed secret message",
-    description="Encrypts a secret message with AES-256-GCM and embeds it into sample LSBs of an uploaded WAV file.",
+    description="Encrypts a secret message with AES-256-GCM and embeds it into carrier WAV audio using the selected algorithm.",
 )
 async def embed(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     message: str = Form(""),
     password: str = Form(""),
+    algorithm: str = Form("lsb"),
+    delta: float | None = Form(None),
+    alpha: float | None = Form(None),
 ) -> Any:
     """
     POST /api/embed
@@ -241,6 +503,9 @@ async def embed(
     - file: Carrier WAV file
     - message: Plaintext secret message
     - password: Secret passphrase
+    - algorithm: Steganography algorithm ('lsb', 'dwt_dct_qim', 'echo', default 'lsb')
+    - delta: Optional QIM step size (for DWT-DCT-QIM)
+    - alpha: Optional echo amplitude (for Echo Hiding)
 
     Returns:
         Stego WAV file as a streaming download attachment with cleanup on completion.
@@ -260,6 +525,14 @@ async def embed(
             "Password cannot be empty.",
         )
 
+    # Validate algorithm identifier and options
+    try:
+        clean_algo, options = validate_stego_options(algorithm, delta, alpha, allow_auto=False)
+    except UnsupportedParameterError as exc:
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "INVALID_PARAMETER", str(exc))
+    except AlgorithmRegistryError as exc:
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "UNKNOWN_ALGORITHM", str(exc))
+
     temp_in: Path | None = None
     temp_out: Path | None = None
 
@@ -267,12 +540,14 @@ async def embed(
         temp_in = await save_upload_safely(file, prefix="carrier")
         temp_out = settings.TEMP_DIR / f"stego_{uuid.uuid4().hex}.wav"
 
-        # Embed using Phase 6 centralized service
+        # Embed using Centralized Service
         result = embed_message(
             input_wav=temp_in,
             output_wav=temp_out,
             message=message,
             password=password,
+            algorithm=clean_algo,
+            **options,
         )
 
         # Attach background task to clean up temporary files AFTER streaming is complete
@@ -288,6 +563,9 @@ async def embed(
             "X-Payload-Size-Bytes": str(result.payload_size_bytes),
             "X-Framed-Size-Bytes": str(result.framed_size_bytes),
             "X-Utilization-Percent": str(result.utilization_percent),
+            "X-Stego-Algorithm": str(result.algorithm_id),
+            "X-Required-Bits": str(result.required_capacity_bits),
+            "X-Available-Bits": str(result.available_capacity_bits),
         }
 
         return FileResponse(
@@ -305,7 +583,19 @@ async def embed(
     except InsufficientAudioCapacityError as exc:
         cleanup_files(temp_in, temp_out)
         return api_error_response(status.HTTP_422_UNPROCESSABLE_CONTENT, "INSUFFICIENT_CAPACITY", str(exc))
+    except CapacityExceededError as exc:
+        cleanup_files(temp_in, temp_out)
+        return api_error_response(status.HTTP_422_UNPROCESSABLE_CONTENT, "INSUFFICIENT_CAPACITY", str(exc))
+    except UnsupportedParameterError as exc:
+        cleanup_files(temp_in, temp_out)
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "INVALID_PARAMETER", str(exc))
+    except AlgorithmRegistryError as exc:
+        cleanup_files(temp_in, temp_out)
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "UNKNOWN_ALGORITHM", str(exc))
     except UnsupportedAudioFormatError as exc:
+        cleanup_files(temp_in, temp_out)
+        return api_error_response(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_FORMAT", str(exc))
+    except AudioFormatIncompatibleError as exc:
         cleanup_files(temp_in, temp_out)
         return api_error_response(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_FORMAT", str(exc))
     except InvalidWavError as exc:
@@ -316,6 +606,8 @@ async def embed(
         err_str = str(exc).lower()
         if "invalid carrier wav" in err_str or "wav" in err_str:
             return api_error_response(status.HTTP_400_BAD_REQUEST, "INVALID_WAV", str(exc))
+        if "insufficient capacity" in err_str:
+            return api_error_response(status.HTTP_422_UNPROCESSABLE_CONTENT, "INSUFFICIENT_CAPACITY", str(exc))
         return api_error_response(status.HTTP_422_UNPROCESSABLE_CONTENT, "EMBEDDING_FAILED", str(exc))
     except Exception as exc:
         cleanup_files(temp_in, temp_out)
@@ -330,11 +622,14 @@ async def embed(
 @router.post(
     "/extract",
     summary="Extract and decrypt secret message",
-    description="Extracts and decrypts a secret message from an uploaded stego WAV file.",
+    description="Extracts and decrypts a secret message from an uploaded stego WAV file with optional algorithm selection.",
 )
 async def extract(
     file: UploadFile = File(...),
     password: str = Form(""),
+    algorithm: str | None = Form(None),
+    delta: float | None = Form(None),
+    alpha: float | None = Form(None),
 ) -> JSONResponse:
     """
     POST /api/extract
@@ -342,9 +637,12 @@ async def extract(
     Accepts multipart/form-data:
     - file: Stego WAV file
     - password: Secret passphrase
+    - algorithm: Optional algorithm override ('lsb', 'dwt_dct_qim', 'echo', or 'auto')
+    - delta: Optional QIM step size override (for DWT-DCT-QIM)
+    - alpha: Optional echo amplitude override (for Echo Hiding)
 
     Returns:
-        JSON containing the recovered plaintext message.
+        JSON containing recovered plaintext message and extraction metadata.
     """
     if not password or len(password) == 0:
         return api_error_response(
@@ -353,24 +651,46 @@ async def extract(
             "Password cannot be empty.",
         )
 
+    # Validate explicit algorithm and options if specified
+    try:
+        clean_algo, options = validate_stego_options(algorithm, delta, alpha, allow_auto=True)
+    except UnsupportedParameterError as exc:
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "INVALID_PARAMETER", str(exc))
+    except AlgorithmRegistryError as exc:
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "UNKNOWN_ALGORITHM", str(exc))
+
     temp_stego: Path | None = None
     try:
         temp_stego = await save_upload_safely(file, prefix="extract")
 
-        # Extract using Phase 6 centralized service
-        secret_message = extract_message(stego_wav=temp_stego, password=password)
+        # Extract using Centralized Service
+        result = extract_message_detailed(
+            stego_wav=temp_stego,
+            password=password,
+            algorithm=clean_algo,
+            **options,
+        )
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
                 "success": True,
-                "message": secret_message,
+                "message": result.message,
+                "algorithm": result.algorithm_id,
+                "payload_size_bytes": result.payload_size_bytes,
+                "framing_checksum_verified": result.framing_checksum_verified,
             },
         )
     except HTTPException as exc:
         err_detail = exc.detail if isinstance(exc.detail, dict) else {"code": "BAD_REQUEST", "message": str(exc.detail)}
         return api_error_response(exc.status_code, err_detail.get("code", "ERROR"), err_detail.get("message", "Error"))
+    except UnsupportedParameterError as exc:
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "INVALID_PARAMETER", str(exc))
+    except AlgorithmRegistryError as exc:
+        return api_error_response(status.HTTP_400_BAD_REQUEST, "UNKNOWN_ALGORITHM", str(exc))
     except UnsupportedAudioFormatError as exc:
+        return api_error_response(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_FORMAT", str(exc))
+    except AudioFormatIncompatibleError as exc:
         return api_error_response(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_FORMAT", str(exc))
     except InvalidWavError as exc:
         return api_error_response(status.HTTP_400_BAD_REQUEST, "INVALID_WAV", str(exc))
@@ -388,7 +708,7 @@ async def extract(
                 "PAYLOAD_CORRUPTED",
                 "Extracted payload failed integrity checks (corrupted data).",
             )
-        elif "no valid hidden payload" in err_str.lower():
+        elif any(phrase in err_str.lower() for phrase in ("no valid hidden payload", "synchronization", "header not found")):
             return api_error_response(
                 status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "NO_STEGO_PAYLOAD",

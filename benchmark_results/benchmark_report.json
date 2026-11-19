@@ -1,0 +1,750 @@
+{
+  "timestamp": "2026-11-19T12:48:51.713796+00:00",
+  "system_info": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "python_version": "3.13.17",
+    "processor": "AMD64 Family 23 Model 104 Stepping 1, AuthenticAMD",
+    "cpu_count": 12,
+    "numpy_version": "2.5.5",
+    "pywt_version": "1.8.0",
+    "ffmpeg_available": false,
+    "lame_available": false,
+    "benchmark_date_utc": "2026-11-19T12:48:42.323236+00:00"
+  },
+  "results": [
+    {
+      "algorithm_id": "lsb",
+      "algorithm_name": "LSB",
+      "options": {},
+      "status": "SUCCESS",
+      "carrier_name": "standard_chirp_33s",
+      "carrier_duration_seconds": 33.0,
+      "message_length_bytes": 10,
+      "error_message": null,
+      "capacity": {
+        "duration_seconds": 33.0,
+        "sample_rate": 44100,
+        "channels": 1,
+        "total_samples": 1455300,
+        "raw_capacity_bits": 1455300,
+        "raw_capacity_bytes": 181912,
+        "usable_payload_capacity_bytes": 181894,
+        "max_embeddable_message_bytes": 181845,
+        "required_bits": 616,
+        "available_bits": 1455300,
+        "utilization_percent": 0.0423
+      },
+      "quality": {
+        "mse": 0.00021645021645021645,
+        "snr_db": 122.52744337405515,
+        "psnr_db": 126.95541845475562,
+        "correlation": 0.9999999999997207,
+        "modified_samples": 315,
+        "total_samples": 1455300,
+        "modification_percent": 0.0216,
+        "quality_rating": "Excellent",
+        "max_absolute_difference": 1.0,
+        "average_absolute_difference": 0.00021645021645021645
+      },
+      "performance": {
+        "embed_time_seconds": 0.1385,
+        "embed_time_std_seconds": 0.0,
+        "extract_time_seconds": 0.1145,
+        "extract_time_std_seconds": 0.0,
+        "total_pipeline_time_seconds": 0.253,
+        "peak_traced_memory_bytes": 8747544,
+        "peak_traced_memory_mb": 8.34,
+        "trials_completed": 1,
+        "trials_requested": 1
+      },
+      "accuracy": {
+        "extraction_success": true,
+        "exact_match": true,
+        "algorithm_identified": "lsb",
+        "algorithm_match": true,
+        "authentication_verified": true,
+        "wrong_password_rejected": true,
+        "sync_corruption_rejected": true,
+        "checksum_corruption_rejected": true,
+        "ciphertext_tamper_rejected": true
+      },
+      "robustness": [
+        {
+          "transformation_name": "Unmodified WAV",
+          "transformation_description": "Unmodified WAV container (bit-identical control)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Additive Gaussian Noise",
+          "transformation_description": "Additive Gaussian white noise (sigma=1.0)",
+          "status": "SYNC_FAILED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "Synchronization or preamble detection failed: No valid CSMA v1 or legacy CSLB steganography header found in carrier audio."
+        },
+        {
+          "transformation_name": "Amplitude Scaling",
+          "transformation_description": "Linear amplitude attenuation (scale=0.95x, ~-0.45 dB)",
+          "status": "SYNC_FAILED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "Synchronization or preamble detection failed: No valid CSMA v1 or legacy CSLB steganography header found in carrier audio."
+        },
+        {
+          "transformation_name": "Resampling",
+          "transformation_description": "Controlled resampling simulation (44100 Hz -> 22050 Hz -> 44100 Hz)",
+          "status": "SYNC_FAILED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "Synchronization or preamble detection failed: No valid CSMA v1 or legacy CSLB steganography header found in carrier audio."
+        },
+        {
+          "transformation_name": "Lossy Compression",
+          "transformation_description": "Lossy compression (MP3 192 kbps)",
+          "status": "NOT TESTED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "External encoder (ffmpeg/lame) not available on system"
+        }
+      ]
+    },
+    {
+      "algorithm_id": "dwt_dct_qim",
+      "algorithm_name": "DWT_DCT_QIM",
+      "options": {
+        "delta": 32
+      },
+      "status": "SUCCESS",
+      "carrier_name": "standard_chirp_33s",
+      "carrier_duration_seconds": 33.0,
+      "message_length_bytes": 10,
+      "error_message": null,
+      "capacity": {
+        "duration_seconds": 33.0,
+        "sample_rate": 44100,
+        "channels": 1,
+        "total_samples": 1455300,
+        "raw_capacity_bits": 22736,
+        "raw_capacity_bytes": 2842,
+        "usable_payload_capacity_bytes": 2824,
+        "max_embeddable_message_bytes": 2775,
+        "required_bits": 616,
+        "available_bits": 22736,
+        "utilization_percent": 2.7094
+      },
+      "quality": {
+        "mse": 0.039530680959252384,
+        "snr_db": 99.91168066244126,
+        "psnr_db": 104.3396557431417,
+        "correlation": 0.9999999999489546,
+        "modified_samples": 23768,
+        "total_samples": 1455300,
+        "modification_percent": 1.6332,
+        "quality_rating": "Excellent",
+        "max_absolute_difference": 4.0,
+        "average_absolute_difference": 0.02315879887308459
+      },
+      "performance": {
+        "embed_time_seconds": 0.1773,
+        "embed_time_std_seconds": 0.0,
+        "extract_time_seconds": 0.1286,
+        "extract_time_std_seconds": 0.0,
+        "total_pipeline_time_seconds": 0.3059,
+        "peak_traced_memory_bytes": 49512257,
+        "peak_traced_memory_mb": 47.22,
+        "trials_completed": 1,
+        "trials_requested": 1
+      },
+      "accuracy": {
+        "extraction_success": true,
+        "exact_match": true,
+        "algorithm_identified": "dwt_dct_qim",
+        "algorithm_match": true,
+        "authentication_verified": true,
+        "wrong_password_rejected": true,
+        "sync_corruption_rejected": true,
+        "checksum_corruption_rejected": true,
+        "ciphertext_tamper_rejected": true
+      },
+      "robustness": [
+        {
+          "transformation_name": "Unmodified WAV",
+          "transformation_description": "Unmodified WAV container (bit-identical control)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Additive Gaussian Noise",
+          "transformation_description": "Additive Gaussian white noise (sigma=1.0)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Amplitude Scaling",
+          "transformation_description": "Linear amplitude attenuation (scale=0.95x, ~-0.45 dB)",
+          "status": "SYNC_FAILED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "Synchronization or preamble detection failed: No valid DWT-DCT-QIM synchronization signature detected in carrier audio (peak correlation fell below threshold 0.875)."
+        },
+        {
+          "transformation_name": "Resampling",
+          "transformation_description": "Controlled resampling simulation (44100 Hz -> 22050 Hz -> 44100 Hz)",
+          "status": "SYNC_FAILED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "Synchronization or preamble detection failed: No valid DWT-DCT-QIM synchronization signature detected in carrier audio (peak correlation fell below threshold 0.875)."
+        },
+        {
+          "transformation_name": "Lossy Compression",
+          "transformation_description": "Lossy compression (MP3 192 kbps)",
+          "status": "NOT TESTED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "External encoder (ffmpeg/lame) not available on system"
+        }
+      ]
+    },
+    {
+      "algorithm_id": "echo",
+      "algorithm_name": "ECHO",
+      "options": {
+        "alpha": 0.08
+      },
+      "status": "SUCCESS",
+      "carrier_name": "standard_chirp_33s",
+      "carrier_duration_seconds": 33.0,
+      "message_length_bytes": 10,
+      "error_message": null,
+      "capacity": {
+        "duration_seconds": 33.0,
+        "sample_rate": 44100,
+        "channels": 1,
+        "total_samples": 1455300,
+        "raw_capacity_bits": 710,
+        "raw_capacity_bytes": 88,
+        "usable_payload_capacity_bytes": 70,
+        "max_embeddable_message_bytes": 21,
+        "required_bits": 616,
+        "available_bits": 710,
+        "utilization_percent": 86.7606
+      },
+      "quality": {
+        "mse": 2141560.231484917,
+        "snr_db": 22.573720683917568,
+        "psnr_db": 27.001695764618034,
+        "correlation": 0.9972369831045199,
+        "modified_samples": 1260583,
+        "total_samples": 1455300,
+        "modification_percent": 86.6201,
+        "quality_rating": "Moderate",
+        "max_absolute_difference": 2228.0,
+        "average_absolute_difference": 1226.7472369958084
+      },
+      "performance": {
+        "embed_time_seconds": 0.2014,
+        "embed_time_std_seconds": 0.0,
+        "extract_time_seconds": 0.1756,
+        "extract_time_std_seconds": 0.0,
+        "total_pipeline_time_seconds": 0.377,
+        "peak_traced_memory_bytes": 49561822,
+        "peak_traced_memory_mb": 47.27,
+        "trials_completed": 1,
+        "trials_requested": 1
+      },
+      "accuracy": {
+        "extraction_success": true,
+        "exact_match": true,
+        "algorithm_identified": "echo",
+        "algorithm_match": true,
+        "authentication_verified": true,
+        "wrong_password_rejected": true,
+        "sync_corruption_rejected": true,
+        "checksum_corruption_rejected": true,
+        "ciphertext_tamper_rejected": true
+      },
+      "robustness": [
+        {
+          "transformation_name": "Unmodified WAV",
+          "transformation_description": "Unmodified WAV container (bit-identical control)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Additive Gaussian Noise",
+          "transformation_description": "Additive Gaussian white noise (sigma=1.0)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Amplitude Scaling",
+          "transformation_description": "Linear amplitude attenuation (scale=0.95x, ~-0.45 dB)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Resampling",
+          "transformation_description": "Controlled resampling simulation (44100 Hz -> 22050 Hz -> 44100 Hz)",
+          "status": "SYNC_FAILED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "Synchronization or preamble detection failed: Echo Hiding synchronization failed: preamble correlation rho=0.5306 is below threshold 0.75 (mean PNR=1.2207)."
+        },
+        {
+          "transformation_name": "Lossy Compression",
+          "transformation_description": "Lossy compression (MP3 192 kbps)",
+          "status": "NOT TESTED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "External encoder (ffmpeg/lame) not available on system"
+        }
+      ]
+    },
+    {
+      "algorithm_id": "dwt_dct_qim",
+      "algorithm_name": "DWT_DCT_QIM",
+      "options": {
+        "delta": 16
+      },
+      "status": "SUCCESS",
+      "carrier_name": "standard_chirp_33s",
+      "carrier_duration_seconds": 33.0,
+      "message_length_bytes": 10,
+      "error_message": null,
+      "capacity": {
+        "duration_seconds": 33.0,
+        "sample_rate": 44100,
+        "channels": 1,
+        "total_samples": 1455300,
+        "raw_capacity_bits": 22736,
+        "raw_capacity_bytes": 2842,
+        "usable_payload_capacity_bytes": 2824,
+        "max_embeddable_message_bytes": 2775,
+        "required_bits": 616,
+        "available_bits": 22736,
+        "utilization_percent": 2.7094
+      },
+      "quality": {
+        "mse": 0.010459699031127603,
+        "snr_db": 105.68583173589742,
+        "psnr_db": 110.11380681659787,
+        "correlation": 0.9999999999864937,
+        "modified_samples": 13611,
+        "total_samples": 1455300,
+        "modification_percent": 0.9353,
+        "quality_rating": "Excellent",
+        "max_absolute_difference": 2.0,
+        "average_absolute_difference": 0.009721706864564007
+      },
+      "performance": {
+        "embed_time_seconds": 0.1622,
+        "embed_time_std_seconds": 0.0,
+        "extract_time_seconds": 0.1318,
+        "extract_time_std_seconds": 0.0,
+        "total_pipeline_time_seconds": 0.2939,
+        "peak_traced_memory_bytes": 49511251,
+        "peak_traced_memory_mb": 47.22,
+        "trials_completed": 1,
+        "trials_requested": 1
+      },
+      "accuracy": {
+        "extraction_success": true,
+        "exact_match": true,
+        "algorithm_identified": "dwt_dct_qim",
+        "algorithm_match": true,
+        "authentication_verified": true,
+        "wrong_password_rejected": true,
+        "sync_corruption_rejected": true,
+        "checksum_corruption_rejected": true,
+        "ciphertext_tamper_rejected": true
+      },
+      "robustness": [
+        {
+          "transformation_name": "Unmodified WAV",
+          "transformation_description": "Unmodified WAV container (bit-identical control)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Additive Gaussian Noise",
+          "transformation_description": "Additive Gaussian white noise (sigma=1.0)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Amplitude Scaling",
+          "transformation_description": "Linear amplitude attenuation (scale=0.95x, ~-0.45 dB)",
+          "status": "SYNC_FAILED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "Synchronization or preamble detection failed: No valid DWT-DCT-QIM synchronization signature detected in carrier audio (peak correlation fell below threshold 0.875)."
+        },
+        {
+          "transformation_name": "Resampling",
+          "transformation_description": "Controlled resampling simulation (44100 Hz -> 22050 Hz -> 44100 Hz)",
+          "status": "SYNC_FAILED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "Synchronization or preamble detection failed: No valid DWT-DCT-QIM synchronization signature detected in carrier audio (peak correlation fell below threshold 0.875)."
+        },
+        {
+          "transformation_name": "Lossy Compression",
+          "transformation_description": "Lossy compression (MP3 192 kbps)",
+          "status": "NOT TESTED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "External encoder (ffmpeg/lame) not available on system"
+        }
+      ]
+    },
+    {
+      "algorithm_id": "dwt_dct_qim",
+      "algorithm_name": "DWT_DCT_QIM",
+      "options": {
+        "delta": 64
+      },
+      "status": "SUCCESS",
+      "carrier_name": "standard_chirp_33s",
+      "carrier_duration_seconds": 33.0,
+      "message_length_bytes": 10,
+      "error_message": null,
+      "capacity": {
+        "duration_seconds": 33.0,
+        "sample_rate": 44100,
+        "channels": 1,
+        "total_samples": 1455300,
+        "raw_capacity_bits": 22736,
+        "raw_capacity_bytes": 2842,
+        "usable_payload_capacity_bytes": 2824,
+        "max_embeddable_message_bytes": 2775,
+        "required_bits": 616,
+        "available_bits": 22736,
+        "utilization_percent": 2.7094
+      },
+      "quality": {
+        "mse": 0.1474630660344946,
+        "snr_db": 94.19419102389327,
+        "psnr_db": 98.62216610459372,
+        "correlation": 0.9999999998095819,
+        "modified_samples": 30024,
+        "total_samples": 1455300,
+        "modification_percent": 2.0631,
+        "quality_rating": "Excellent",
+        "max_absolute_difference": 8.0,
+        "average_absolute_difference": 0.04666872809729953
+      },
+      "performance": {
+        "embed_time_seconds": 0.1621,
+        "embed_time_std_seconds": 0.0,
+        "extract_time_seconds": 0.1139,
+        "extract_time_std_seconds": 0.0,
+        "total_pipeline_time_seconds": 0.2759,
+        "peak_traced_memory_bytes": 49510595,
+        "peak_traced_memory_mb": 47.22,
+        "trials_completed": 1,
+        "trials_requested": 1
+      },
+      "accuracy": {
+        "extraction_success": true,
+        "exact_match": true,
+        "algorithm_identified": "dwt_dct_qim",
+        "algorithm_match": true,
+        "authentication_verified": true,
+        "wrong_password_rejected": true,
+        "sync_corruption_rejected": true,
+        "checksum_corruption_rejected": true,
+        "ciphertext_tamper_rejected": true
+      },
+      "robustness": [
+        {
+          "transformation_name": "Unmodified WAV",
+          "transformation_description": "Unmodified WAV container (bit-identical control)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Additive Gaussian Noise",
+          "transformation_description": "Additive Gaussian white noise (sigma=1.0)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Amplitude Scaling",
+          "transformation_description": "Linear amplitude attenuation (scale=0.95x, ~-0.45 dB)",
+          "status": "SYNC_FAILED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "Synchronization or preamble detection failed: No valid DWT-DCT-QIM synchronization signature detected in carrier audio (peak correlation fell below threshold 0.875)."
+        },
+        {
+          "transformation_name": "Resampling",
+          "transformation_description": "Controlled resampling simulation (44100 Hz -> 22050 Hz -> 44100 Hz)",
+          "status": "SYNC_FAILED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "Synchronization or preamble detection failed: No valid DWT-DCT-QIM synchronization signature detected in carrier audio (peak correlation fell below threshold 0.875)."
+        },
+        {
+          "transformation_name": "Lossy Compression",
+          "transformation_description": "Lossy compression (MP3 192 kbps)",
+          "status": "NOT TESTED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "External encoder (ffmpeg/lame) not available on system"
+        }
+      ]
+    },
+    {
+      "algorithm_id": "echo",
+      "algorithm_name": "ECHO",
+      "options": {
+        "alpha": 0.12
+      },
+      "status": "SUCCESS",
+      "carrier_name": "standard_chirp_33s",
+      "carrier_duration_seconds": 33.0,
+      "message_length_bytes": 10,
+      "error_message": null,
+      "capacity": {
+        "duration_seconds": 33.0,
+        "sample_rate": 44100,
+        "channels": 1,
+        "total_samples": 1455300,
+        "raw_capacity_bits": 710,
+        "raw_capacity_bytes": 88,
+        "usable_payload_capacity_bytes": 70,
+        "max_embeddable_message_bytes": 21,
+        "required_bits": 616,
+        "available_bits": 710,
+        "utilization_percent": 86.7606
+      },
+      "quality": {
+        "mse": 4818735.130117501,
+        "snr_db": 19.051693066188978,
+        "psnr_db": 23.479668146889445,
+        "correlation": 0.9938009522151873,
+        "modified_samples": 1260579,
+        "total_samples": 1455300,
+        "modification_percent": 86.6199,
+        "quality_rating": "Moderate",
+        "max_absolute_difference": 3342.0,
+        "average_absolute_difference": 1840.160574452003
+      },
+      "performance": {
+        "embed_time_seconds": 0.198,
+        "embed_time_std_seconds": 0.0,
+        "extract_time_seconds": 0.1561,
+        "extract_time_std_seconds": 0.0,
+        "total_pipeline_time_seconds": 0.3541,
+        "peak_traced_memory_bytes": 49561711,
+        "peak_traced_memory_mb": 47.27,
+        "trials_completed": 1,
+        "trials_requested": 1
+      },
+      "accuracy": {
+        "extraction_success": true,
+        "exact_match": true,
+        "algorithm_identified": "echo",
+        "algorithm_match": true,
+        "authentication_verified": true,
+        "wrong_password_rejected": true,
+        "sync_corruption_rejected": true,
+        "checksum_corruption_rejected": true,
+        "ciphertext_tamper_rejected": true
+      },
+      "robustness": [
+        {
+          "transformation_name": "Unmodified WAV",
+          "transformation_description": "Unmodified WAV container (bit-identical control)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Additive Gaussian Noise",
+          "transformation_description": "Additive Gaussian white noise (sigma=1.0)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Amplitude Scaling",
+          "transformation_description": "Linear amplitude attenuation (scale=0.95x, ~-0.45 dB)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Resampling",
+          "transformation_description": "Controlled resampling simulation (44100 Hz -> 22050 Hz -> 44100 Hz)",
+          "status": "SYNC_FAILED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "Synchronization or preamble detection failed: Echo Hiding synchronization failed: preamble correlation rho=0.6303 is below threshold 0.75 (mean PNR=1.4414)."
+        },
+        {
+          "transformation_name": "Lossy Compression",
+          "transformation_description": "Lossy compression (MP3 192 kbps)",
+          "status": "NOT TESTED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "External encoder (ffmpeg/lame) not available on system"
+        }
+      ]
+    },
+    {
+      "algorithm_id": "echo",
+      "algorithm_name": "ECHO",
+      "options": {
+        "alpha": 0.15
+      },
+      "status": "SUCCESS",
+      "carrier_name": "standard_chirp_33s",
+      "carrier_duration_seconds": 33.0,
+      "message_length_bytes": 10,
+      "error_message": null,
+      "capacity": {
+        "duration_seconds": 33.0,
+        "sample_rate": 44100,
+        "channels": 1,
+        "total_samples": 1455300,
+        "raw_capacity_bits": 710,
+        "raw_capacity_bytes": 88,
+        "usable_payload_capacity_bytes": 70,
+        "max_embeddable_message_bytes": 21,
+        "required_bits": 616,
+        "available_bits": 710,
+        "utilization_percent": 86.7606
+      },
+      "quality": {
+        "mse": 7528445.261168144,
+        "snr_db": 17.11397064826873,
+        "psnr_db": 21.541945728969193,
+        "correlation": 0.9903489441591263,
+        "modified_samples": 1260589,
+        "total_samples": 1455300,
+        "modification_percent": 86.6206,
+        "quality_rating": "Moderate",
+        "max_absolute_difference": 4178.0,
+        "average_absolute_difference": 2300.0781818181817
+      },
+      "performance": {
+        "embed_time_seconds": 0.1927,
+        "embed_time_std_seconds": 0.0,
+        "extract_time_seconds": 0.1564,
+        "extract_time_std_seconds": 0.0,
+        "total_pipeline_time_seconds": 0.3491,
+        "peak_traced_memory_bytes": 49561599,
+        "peak_traced_memory_mb": 47.27,
+        "trials_completed": 1,
+        "trials_requested": 1
+      },
+      "accuracy": {
+        "extraction_success": true,
+        "exact_match": true,
+        "algorithm_identified": "echo",
+        "algorithm_match": true,
+        "authentication_verified": true,
+        "wrong_password_rejected": true,
+        "sync_corruption_rejected": true,
+        "checksum_corruption_rejected": true,
+        "ciphertext_tamper_rejected": true
+      },
+      "robustness": [
+        {
+          "transformation_name": "Unmodified WAV",
+          "transformation_description": "Unmodified WAV container (bit-identical control)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Additive Gaussian Noise",
+          "transformation_description": "Additive Gaussian white noise (sigma=1.0)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Amplitude Scaling",
+          "transformation_description": "Linear amplitude attenuation (scale=0.95x, ~-0.45 dB)",
+          "status": "SURVIVED",
+          "extracted_successfully": true,
+          "exact_match": true,
+          "notes": "Message extracted and verified intact"
+        },
+        {
+          "transformation_name": "Resampling",
+          "transformation_description": "Controlled resampling simulation (44100 Hz -> 22050 Hz -> 44100 Hz)",
+          "status": "SYNC_FAILED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "Synchronization or preamble detection failed: Echo Hiding synchronization failed: preamble correlation rho=0.6777 is below threshold 0.75 (mean PNR=1.5933)."
+        },
+        {
+          "transformation_name": "Lossy Compression",
+          "transformation_description": "Lossy compression (MP3 192 kbps)",
+          "status": "NOT TESTED",
+          "extracted_successfully": false,
+          "exact_match": false,
+          "notes": "External encoder (ffmpeg/lame) not available on system"
+        }
+      ]
+    },
+    {
+      "algorithm_id": "echo",
+      "algorithm_name": "ECHO",
+      "options": {
+        "alpha": 0.08
+      },
+      "status": "CAPACITY_INSUFFICIENT",
+      "carrier_name": "short_carrier_1s",
+      "carrier_duration_seconds": 1.0,
+      "message_length_bytes": 10,
+      "error_message": "Required capacity (616 bits) exceeds available (21 bits).",
+      "capacity": {
+        "duration_seconds": 1.0,
+        "sample_rate": 44100,
+        "channels": 1,
+        "total_samples": 44100,
+        "raw_capacity_bits": 21,
+        "raw_capacity_bytes": 2,
+        "usable_payload_capacity_bytes": 0,
+        "max_embeddable_message_bytes": 0,
+        "required_bits": 616,
+        "available_bits": 21,
+        "utilization_percent": 2933.3333
+      },
+      "quality": null,
+      "performance": null,
+      "accuracy": null,
+      "robustness": []
+    }
+  ]
+}

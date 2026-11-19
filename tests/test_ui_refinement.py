@@ -128,22 +128,30 @@ def test_capacity_calculation_example_5211648_samples(tmp_path: Path) -> None:
 
 
 def test_capacity_estimation_service_matches_frontend_formula(tmp_path: Path) -> None:
-    """Verify estimate_capacity service produces matching figures."""
+    """Verify estimate_capacity service produces matching figures for default CSMA and explicit legacy CSLB."""
     wav_path = tmp_path / "carrier.wav"
     # Create 4000 frames mono 16-bit = 4000 samples
     wav_path.write_bytes(create_pcm_wav_bytes(channels=1, num_frames=4000))
 
     message = "Secret test message"
     msg_bytes = len(message.encode("utf-8"))
-    estimate = estimate_capacity(wav_path, message)
 
+    # Default CSMA workflow: 49B crypto + 18B CSMA header = 67B overhead
+    estimate = estimate_capacity(wav_path, message)
     assert estimate.message_utf8_bytes == msg_bytes
     assert estimate.estimated_crypto_bytes == msg_bytes + 49
-    assert estimate.framed_payload_bytes == msg_bytes + 62
-    assert estimate.required_bits == (msg_bytes + 62) * 8
+    assert estimate.framed_payload_bytes == msg_bytes + 67
+    assert estimate.required_bits == (msg_bytes + 67) * 8
     assert estimate.available_bits == 4000
-    expected_util = round(((msg_bytes + 62) * 8 / 4000) * 100, 4)
+    expected_util = round(((msg_bytes + 67) * 8 / 4000) * 100, 4)
     assert estimate.utilization_percent == expected_util
+
+    # Explicit legacy CSLB framing: 49B crypto + 13B CSLB header = 62B overhead
+    estimate_legacy = estimate_capacity(wav_path, message, framing="legacy_cslb")
+    assert estimate_legacy.framed_payload_bytes == msg_bytes + 62
+    assert estimate_legacy.required_bits == (msg_bytes + 62) * 8
+    expected_legacy_util = round(((msg_bytes + 62) * 8 / 4000) * 100, 4)
+    assert estimate_legacy.utilization_percent == expected_legacy_util
 
 
 # ---------------------------------------------------------------------------

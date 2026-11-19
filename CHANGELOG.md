@@ -6,7 +6,7 @@ All notable technical milestones and architectural implementations of the CryptA
 
 ## Phase 1 — Project Setup & Environment Baseline
 - Initialized Python virtual environment (`.venv`) on Windows.
-- Established clean directory structure (`app/`, `app/api/`, `app/core/`, `app/crypto/`, `app/audio/`, `app/steganography/`, `app/services/`, `app/evaluation/`, `app/static/`, `tests/`, `scripts/`, `temporary/`).
+- Established clean directory structure (`app/`, `app/api/`, `app/core/`, `app/crypto/`, `app/audio/`, `app/steganography/`, `app/services/`, `app/evaluation/`, `frontend/`, `tests/`, `scripts/`, `temporary/`).
 - Added baseline dependencies (`fastapi`, `uvicorn`, `cryptography`, `numpy`, `matplotlib`, `pytest`, `httpx`, `python-multipart`).
 - Authored `scripts/verify_environment.py` with 40 automated structural and import checks.
 
@@ -58,50 +58,72 @@ All notable technical milestones and architectural implementations of the CryptA
 - Added streaming upload size enforcement (50 MB per file, 100 MB combined) with immediate HTTP 413 rejection.
 
 ## Phase 9 — Frontend Design (Light Primary + Dark Theme)
-- Designed modern cybersecurity dashboard in `app/static/index.html` and `app/static/css/styles.css`.
-- Established Light Theme as default primary aesthetic, with Dark Theme toggle persisted in `localStorage`.
-- Built modular responsive views: Dashboard, Embed Message, Extract Message, Audio Inspector, Quality Analysis, and About.
-- Created audio file drop zones, capacity gauges, waveform previews, and metrics visualization grids.
+- Designed responsive cybersecurity interface with semantic HTML5, CSS3 variables, and vanilla ES2022 JavaScript.
+- Implemented primary Light Theme with high-contrast Dark Theme toggle persisted in `localStorage`.
+- Integrated pre-render head script preventing Flash of Unstyled Content (FOUC).
+- Implemented tabbed views for Dashboard, Embed, Extract, Audio Inspector, and Quality Analysis.
 
-## Phase 10 — Frontend and Backend API Integration
-- Implemented `app/static/js/api.js` and `app/static/js/app.js`.
-- Connected all UI views to backend REST endpoints via asynchronous `fetch` calls.
-- Implemented live client-side WAV inspection and capacity calculation before embedding.
-- Handled audio playback for original and stego WAV files.
-- Provided clear error handling and toast notifications for failed password authentications and invalid files.
+## Phase 10 — Frontend Integration & Real-Time Capacity
+- Connected frontend API client (`frontend/js/api.js`) to backend endpoints.
+- Implemented debounced real-time capacity calculator with dynamic progress bar and color-coded status pills.
+- Added drag-and-drop file upload zones with visual state transitions.
+- Integrated HTML5 Web Audio API waveform and audio player previews.
 
-## Phase 10.1 — UI Accuracy and Refinement
-- Corrected technical labeling: updated capacity equation to exact 62-byte overhead formula.
-- Added 6-metric capacity and framing calculation grid on Embed view.
-- Added Technical Summary Bar on Dashboard and Protocol Overhead panel on Audio Inspector.
-- Added modified sample count tracking and perceptual disclaimer on Quality Analysis view.
-- Added "Clear Recovered Message" button with zero-storage persistence on Extract view.
-- Resolved responsive layout constraints on mobile viewports down to 375px.
+## Phase 11 & 11.1 — Security Hardening, Verification & Decoupling
+- Implemented `security_headers_middleware` in `app/main.py`: `nosniff`, `DENY`, `no-referrer`, anti-caching on `/api/*`.
+- Enforced strict Content Security Policy (`script-src 'self'`) eliminating external CDN script dependencies.
+- Sanitized `Content-Disposition` download filenames against header injection attacks.
+- Standardized error envelopes and implemented lifespan startup cleanup of orphaned temporary files.
+- Decoupled client presentation (`frontend/`) and backend service (`app/`) for independent deployment readiness.
 
-## Phase 11 — Comprehensive Security Testing and Hardening
-- Conducted full-stack security review across crypto, WAV parsing, LSB bounds, API endpoints, and DOM manipulation.
-- Implemented `security_headers_middleware` in `app/main.py` (`nosniff`, `DENY`, `no-referrer`, anti-caching on `/api/*`, Content Security Policy).
-- Sanitized `Content-Disposition` filename stems in `/api/embed` against header injection.
-- Replaced toast notification string assembly with safe DOM element creation (`textContent`).
-- Added FastAPI `lifespan` startup purge for orphaned temporary files.
-- Standardized global 500 error envelope to `{success: false, error: {code, message}}`.
-- Authored `tests/test_security_hardening.py` with 21 automated regression tests (262 tests passing).
+## Phase 12 — Final Documentation & Release Packaging
+- Consolidated academic project report, test report, API documentation, and security assessment.
+- Created `scripts/package_release.py` generating clean release archive (`CryptAudio-Web-Final.zip`).
 
-## Phase 11.1 — Security Verification and CSP Refinement
-- Extracted pre-render theme application to `app/static/js/theme.js` in `<head>` to prevent FOUC.
-- Purged `'unsafe-inline'` completely from application `script-src` and removed all inline scripts from `index.html`.
-- Removed external CDN permissions (`https://cdn.jsdelivr.net`) from all application routes, isolating CDN access to `/docs`.
-- Implemented low-level `_verify_riff_wave_format()` in `app/audio/wav_handler.py`:
-  - Enforced integer PCM validation (`KSDATAFORMAT_SUBTYPE_PCM`).
-  - Strictly rejected IEEE float subformats (`0x0003` and extensible float GUID).
-  - Validated subformat GUIDs, chunk boundaries, block alignment, and rejected partial bit depths (e.g. 18-bit in 24-bit container).
-- Verified upload streaming boundaries (50MB individual, 100MB combined) and temporary file unlinking.
-- Authored `tests/test_security_verification.py` with 22 new tests (298 tests passing).
+---
 
-## Phase 12 — Final Documentation, Deliverables & Packaging
-- Authored comprehensive `README.md` with system requirements, installation, run commands, and usage guides.
-- Authored 26-section academic project report `PROJECT_REPORT.md`.
-- Authored architecture and data flow documentation with Mermaid diagrams in `docs/ARCHITECTURE.md` and `docs/DATA_FLOW.md`.
-- Consolidated security assessment in `SECURITY_ASSESSMENT.md`.
-- Authored test report in `TEST_REPORT.md` and API reference in `API_DOCUMENTATION.md`.
-- Packaged clean, distributable release archive `CryptAudio-Web-Final.zip`.
+## Phase M1 — Multi-Algorithm Steganography Architecture Design
+- Formulated extensible multi-algorithm architecture supporting LSB, DWT-DCT-QIM, and Echo Hiding.
+- Authored `MULTI_ALGORITHM_ARCHITECTURE.md` specifying interface abstractions, parameter schemas, and backward compatibility.
+
+## Phase M2 — Universal Steganography Framing & Algorithm Registry
+- Implemented universal **CSMA v1** envelope protocol (`app/steganography/envelope.py`) with 2-byte sync words (`0xF9A9`, `0x596A`), algorithm flags, length encoding, and CRC32 framing.
+- Implemented `StegoAlgorithmRegistry` (`app/steganography/registry.py`) providing discovery, descriptor metadata, and dynamic instantiation.
+- Preserved 100% backward compatibility for legacy `CSLB` (Phase 5) payloads.
+
+## Phase M3 — DWT-DCT-QIM Steganography Engine
+- Implemented `app/steganography/dwt_dct_qim_engine.py` using `PyWavelets` and `NumPy`.
+- Decomposed audio into approximation sub-bands via Discrete Wavelet Transform.
+- Applied Discrete Cosine Transform (DCT) on sub-band blocks and embedded payload bits via Quantization Index Modulation (QIM).
+- Parameterized quantization step size $\Delta \in [16.0, 64.0]$ (default: 32.0).
+
+## Phase M4 — Echo Hiding Steganography Engine
+- Implemented `app/steganography/echo_hiding_engine.py`.
+- Encoded payload bits into segments of 2048 samples using dual artificial echo delays ($d_0 = 44, d_1 = 57$) with configurable attenuation $\alpha \in [0.05, 0.20]$ (default: 0.08).
+- Implemented cepstral deconvolution recovery using complex cepstrum analysis.
+
+## Phase M5 & M5.1 — Multi-Algorithm Service & REST API Integration
+- Extended `app/services/cryptaudio_service.py` with multi-algorithm routing, capacity estimation, and automatic algorithm detection.
+- Extended REST endpoints: added `GET /api/algorithms`, added `POST /api/capacity`, and updated `/api/embed`, `/api/extract`, and `/api/audio/inspect`.
+- Enforced strict input validation rejecting invalid algorithm names and out-of-bounds parameters.
+
+## Phase M6, M6.1 & M6.2 — Multi-Algorithm Frontend Expansion
+- Extended single-page dashboard with interactive algorithm selection cards (LSB, DWT-DCT-QIM, Echo Hiding).
+- Added dynamic parameter control panels (Delta slider for DWT, Alpha input for Echo).
+- Implemented asynchronous race guards and dynamic input fingerprinting to prevent stale capacity responses.
+- Added comprehensive Node.js behavioral test suite (`tests/test_frontend_logic.js`).
+
+## Phase M7, M7.1 & M7.2 — Comparative Benchmarking & Scientific Evaluation
+- Implemented automated comparative benchmarking harness (`app/evaluation/benchmark.py`).
+- Scientifically evaluated capacity, audio quality (MSE, SNR, PSNR, Pearson Correlation), processing time, and robustness across LSB, DWT-DCT-QIM, and Echo Hiding.
+- Produced comprehensive benchmark report in JSON, CSV, and Markdown formats (`BENCHMARK.md`).
+
+## Phase M8 — Final Integration, Security Validation & Release Readiness (v1.0.0)
+- **M8.1 Audit & Approval**: Full repository inspection and architecture review; user approval obtained.
+- **M8.2 End-to-End Integration**: 15 comprehensive lifecycle integration tests covering all three algorithms, multilingual Unicode, boundary cases, and tampering.
+- **M8.3 Playwright Browser Automation**: 13 automated headless Chrome tests verifying UI controls, theme toggling, responsive layouts, live embedding, file downloading, extraction, and in-browser XSS resistance.
+- **M8.4 Security Validation**: 22 dedicated security tests verifying non-WAV rejection, malformed RIFF handling, non-PCM rejection, salt/nonce randomness, tamper sensitivity, and zero information leakage.
+- **M8.5 Performance & Resource Profile**: Validated processing times, tracemalloc peak memory usage (< 120 MB), 5-way concurrent request handling, and zero temporary file leakage under load.
+- **M8.6 Deployment Verification**: Created `render.yaml` deployment blueprint, added cross-platform `run.py`, updated `app/core/config.py` for dynamic cloud port binding, and verified 40/40 environment checks.
+- **M8.7 Documentation & Packaging**: Updated `README.md`, `PROJECT_REPORT.md`, `SECURITY_ASSESSMENT.md`, `TEST_REPORT.md`, and `API_DOCUMENTATION.md`; created clean `CryptAudio-Web-Final.zip` distribution package.
+- **M8.8 Final Regression**: Executed all 711 pytest tests and 17 Node.js tests with 100% pass rate.

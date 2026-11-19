@@ -406,14 +406,22 @@ def test_repeated_embedding_produces_different_stego_audio(tmp_path: Path) -> No
 # ---------------------------------------------------------------------------
 
 def test_estimate_capacity_helper(tmp_path: Path) -> None:
-    """Tests the estimate_capacity utility function."""
+    """Tests the estimate_capacity utility function with default CSMA and explicit legacy CSLB."""
     carrier = create_carrier_wav(tmp_path / "carrier_est.wav", channels=2, num_frames=1000)
-    # Available samples = 2000 bits
     msg = "Test estimation"
 
+    # Default CSMA workflow: Channel 0 policy (1000 frames = 1000 bits) matching actual embedding
     est = estimate_capacity(carrier, msg)
     assert isinstance(est, CapacityEstimate)
     assert est.can_fit is True
-    assert est.available_bits == 2000
+    assert est.available_bits == 1000
     assert est.required_bits > 0
     assert est.utilization_percent > 0
+
+    # Explicit legacy CSLB framing: all samples (1000 frames * 2 channels = 2000 bits)
+    est_legacy = estimate_capacity(carrier, msg, framing="legacy_cslb")
+    assert isinstance(est_legacy, CapacityEstimate)
+    assert est_legacy.can_fit is True
+    assert est_legacy.available_bits == 2000
+    assert est_legacy.required_bits > 0
+    assert est_legacy.utilization_percent > 0
